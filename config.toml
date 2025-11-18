@@ -1,0 +1,35 @@
+base_url = "https://thecloudlet.github.io"
+title = "Compiler Dev Notes"
+description = "Long-term notes on compiler development, LLVM, MLIR, and C++"
+compile_sass = true
+build_search_index = true
+generate_feeds = true
+feed_filenames = ["atom.xml"]
+
+[markdown]
+highlight_code = true
+highlight_theme = "base16-ocean-dark"
+extra_syntaxes_and_themes = []
+render_emoji = false
+external_links_target_blank = true
+external_links_no_follow = false
+external_links_no_referrer = false
+smart_punctuation = false
+
+[link_checker]
+skip_prefixes = []
+skip_anchor_prefixes = []
+
+[search]
+include_title = true
+include_description = true
+include_content = true
+
+[slugify]
+paths = "on"
+taxonomies = "on"
+anchors = "on"
+
+[extra]
+author = "Yi-Ping Pan (Cloudlet)"
+keywords = ["compiler", "llvm", "mlir", "c++", "haskell", "optimization"]
