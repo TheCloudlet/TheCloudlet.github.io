@@ -1,6 +1,6 @@
 base_url = "https://thecloudlet.github.io"
-title = "Compiler Dev Notes"
-description = "Long-term notes on compiler development, LLVM, MLIR, and C++"
+title = "The Cloudlet"
+description = "Notes on compilers, systems programming, and functional programming"
 theme = "tabi"
 compile_sass = true
 build_search_index = true
@@ -14,7 +14,7 @@ taxonomies = [
 
 [markdown]
 highlight_code = true
-highlight_theme = "base16-ocean-dark"
+highlight_theme = "css"
 extra_syntaxes_and_themes = []
 render_emoji = false
 external_links_target_blank = true
@@ -40,5 +40,5 @@ anchors = "on"
 author = "Yi-Ping Pan (Cloudlet)"
 keywords = ["compiler", "llvm", "mlir", "c++", "haskell", "optimization"]
 show_reading_time = true
-show_table_of_contents = true
+toc = true
 show_related_posts = true

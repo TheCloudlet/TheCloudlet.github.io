@@ -1,0 +1,151 @@
+// =============================================================================
+// Custom Styles for The Cloudlet
+// =============================================================================
+
+// Import the theme's main stylesheet
+@use '../themes/tabi/sass/main.scss';
+
+// =============================================================================
+// 1. CSS Variables & Theme Overrides
+// =============================================================================
+
+:root {
+    // -- Fonts --
+    --code-font: 'Intel One Mono', monospace;
+
+    // -- GitHub Dark Syntax Highlighting --
+    // Overrides Tabi's Catppuccin colors
+    --rosewater: #ffa657;  // orange/variable
+    --flamingo: #ff7b72;   // red/keyword
+    --pink: #ff7b72;
+    --mauve: #d2a8ff;      // purple/function
+    --red: #ff7b72;
+    --maroon: #ff7b72;
+    --peach: #ffa657;      // orange
+    --yellow: #e3b341;
+    --green: #7ee787;      // green/type
+    --teal: #a5d6ff;       // light blue/string
+    --sky: #79c0ff;        // blue/constant
+    --blue: #79c0ff;
+    --lavender: #d2a8ff;   // purple
+    --text: #c9d1d9;       // foreground
+    --overlay0: #8b949e;   // comment
+    --codeblock-bg: #0d1117;
+    --codeblock-highlight: #161b22;
+}
+
+// =============================================================================
+// 2. Font Declarations
+// =============================================================================
+
+// IBM Plex Sans - Body text
+@font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('https://fonts.gstatic.com/s/ibmplexsans/v19/zYXgKVElMYYaJe8bpLHnCwDKhdHeFaxOedc.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('https://fonts.gstatic.com/s/ibmplexsans/v19/zYX9KVElMYYaJe8bpLHnCwDKjSL9AIFsdP3pBms.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('https://fonts.gstatic.com/s/ibmplexsans/v19/zYX9KVElMYYaJe8bpLHnCwDKjWr8AIFsdP3pBms.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+// Intel One Mono - Code blocks
+@font-face {
+    font-family: 'Intel One Mono';
+    src: url('https://cdn.jsdelivr.net/gh/fonts-archive/IntelOneMono/IntelOneMono-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Intel One Mono';
+    src: url('https://cdn.jsdelivr.net/gh/fonts-archive/IntelOneMono/IntelOneMono-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+// =============================================================================
+// 3. Typography
+// =============================================================================
+
+// Use IBM Plex Sans for article body text
+article {
+    p, li, details, summary {
+        font-family: 'IBM Plex Sans', sans-serif;
+    }
+}
+
+// Make headers more distinct - use serif font, larger sizes, and color
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Source Serif', Georgia, serif;
+    color: var(--primary-color);
+}
+
+article {
+    h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+    }
+
+    h2 {
+        font-size: 1.6rem;
+        font-weight: 650;
+        margin-top: 1.4em;
+        margin-bottom: 0.4em;
+    }
+
+    h3 {
+        font-size: 1.35rem;
+        font-weight: 600;
+        margin-top: 1.2em;
+        margin-bottom: 0.3em;
+    }
+
+    h4 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-top: 1em;
+        margin-bottom: 0.2em;
+    }
+}
+
+// =============================================================================
+// 4. Code Styling
+// =============================================================================
+
+// Code block styling
+pre {
+    background-color: var(--codeblock-bg);
+    color: var(--text);
+
+    code {
+        background-color: transparent;
+        color: inherit;
+    }
+}
+
+// Inline code styling
+:not(pre) > code {
+    background-color: var(--bg-0);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-size: 0.85em;
+}
