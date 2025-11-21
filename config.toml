@@ -42,3 +42,15 @@ keywords = ["compiler", "llvm", "mlir", "c++", "haskell", "optimization"]
 show_reading_time = true
 toc = true
 show_related_posts = true
+show_author = true
+
+# Social links in footer
+socials = [
+    { name = "GitHub", url = "https://github.com/TheCloudlet", icon = "github" },
+    { name = "LinkedIn", url = "https://linkedin.com/in/yipingpan", icon = "linkedin" },
+]
+
+# Footer menu
+footer_menu = [
+    { url = "about", name = "about", trailing_slash = true },
+]
