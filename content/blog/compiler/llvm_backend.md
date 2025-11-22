@@ -183,11 +183,13 @@ Callee-Saved: MUST preserve if used (requires prolog/epilog)
 |    v                                                       |
 | +------------------------------------------------------+   |
 | | 3. SSA-based Machine Optimizations                   |   |
+| |    - Machine CSE, LICM                               |   |
+| |    - Target-independent optimizations                |   |
 | +------------------------------------------------------+   |
 |    |                                                       |
 |    v                                                       |
 | +------------------------------------------------------+   |
-| | 4. Register Allocation  <-- THE CRISIS               |   |
+| | 4. Register Allocation                               |   |
 | |    - Map virtual -> physical registers               |   |
 | |    - Graph coloring                                  |   |
 | |    - Spilling if necessary                           |   |
@@ -269,7 +271,7 @@ Post-RA opts: Clean up redundancies
 
 ---
 
-## Instruction Selection
+## STAGE 1: Instruction Selection
 
 ### The Problem
 
@@ -379,9 +381,17 @@ Example:
 For -Os (size): Use instruction byte count instead
 ```
 
+### References
+
+- **LLVM SelectionDAG**: `llvm/include/llvm/CodeGen/SelectionDAG.h`
+- **TableGen Backend**: `llvm/utils/TableGen/CodeGenDAGPatterns.cpp`
+- **RISC-V ISel**: `llvm/lib/Target/RISCV/RISCVISelLowering.cpp`
+- **Pattern Matching**: `llvm/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp`
+- **LLVM Documentation**: [Instruction Selection](https://llvm.org/docs/CodeGenerator.html#instruction-selection)
+
 ---
 
-## Instruction Scheduling
+## STAGE 2: Instruction Scheduling
 
 ### The Dual Mission
 
@@ -475,6 +485,14 @@ Need only 1 color - can reuse same register!
 1. Use OLD values (defined long ago) → kills them early
 2. Don't define NEW values → delays new live ranges
 
+### References
+
+- **LLVM Scheduler**: `llvm/include/llvm/CodeGen/ScheduleDAG.h`
+- **List Scheduling**: `llvm/lib/CodeGen/ScheduleDAGInstrs.cpp`
+- **Machine Scheduler**: `llvm/lib/CodeGen/MachineScheduler.cpp`
+- **RISC-V Scheduling**: `llvm/lib/Target/RISCV/RISCVSchedule*.td`
+- **LLVM Documentation**: [Machine Instruction Scheduler](https://llvm.org/docs/MIRLangRef.html#scheduling)
+
 ### Pre-RA vs Post-RA Scheduling
 
 ```
@@ -490,7 +508,31 @@ Need only 1 color - can reuse same register!
 
 ---
 
-## Register Allocation
+## STAGE 3: SSA-based Machine Optimizations
+
+### Overview
+
+Machine-level optimizations operate on MachineIR (target-specific instructions with virtual registers) but before register allocation. These passes are target-independent and work across all architectures.
+
+**Key passes:**
+
+- **MachineCSE** (Common Subexpression Elimination): Removes redundant computations
+- **MachineLICM** (Loop Invariant Code Motion): Moves loop-invariant operations outside loops
+- **Machine Copy Propagation**: Eliminates unnecessary register copies
+- **Dead Machine Instruction Elimination**: Removes unused instructions
+
+**To write:**
+
+- Detailed analysis of MachineCSE algorithm
+- MachineLICM heuristics and profitability analysis
+- Interaction with earlier and later passes
+- Target-specific customization hooks
+
+**Reference:** See LLVM's `MachineCSE.cpp`, `MachineLICM.cpp`, and related passes in `llvm/lib/CodeGen/`.
+
+---
+
+## STAGE 4: Register Allocation
 
 ### The Core Problem
 
@@ -594,11 +636,153 @@ Step 3: If K-coloring fails -> SPILLING
 +----------------+----------------------+------------------------+
 ```
 
+### References
+
+- **Register Allocation**: `llvm/lib/CodeGen/RegAllocGreedy.cpp`
+- **Live Intervals**: `llvm/include/llvm/CodeGen/LiveInterval.h`
+- **Spilling**: `llvm/lib/CodeGen/InlineSpiller.cpp`
+- **Virtual Registers**: `llvm/include/llvm/CodeGen/VirtRegMap.h`
+- **LLVM Documentation**: [Register Allocation](https://llvm.org/docs/CodeGenerator.html#register-allocation)
+- **Research Paper**: "Iterated Register Coalescing" by George & Appel
+
 ---
 
-## SSA and Phi Elimination
+## STAGE 5: Prolog/Epilog Insertion
 
-### What is Phi?
+### When and Why
+
+```
++------------------------------------------------------------+
+|              Prolog/Epilog Insertion (PEI)                 |
++------------------------------------------------------------+
+| TIMING: Runs AFTER Register Allocation                     |
+|                                                            |
+| WHY: RegAlloc provides the "closing report":               |
+|   1. Which callee-saved registers were used?               |
+|   2. How much stack space for spills?                      |
+|   3. Need to save ra? (function makes calls?)              |
+|                                                            |
+| BEFORE PEI:                                                |
+|   add  a0, a1, a2    # Function body                       |
+|   mul  s0, a0, a3    # Uses s0 (callee-saved!)            |
+|   sw   s1, 4(sp)     # Spill                               |
+|   ret                                                       |
+|                                                            |
+| AFTER PEI:                                                 |
+|   addi sp, sp, -16   # PROLOG: Allocate frame             |
+|   sw   ra, 12(sp)    #         Save ra                     |
+|   sw   s0, 8(sp)     #         Save s0                     |
+|   sw   s1, 4(sp)     #         Save s1                     |
+|                                                            |
+|   add  a0, a1, a2    # Function body (unchanged)           |
+|   mul  s0, a0, a3                                          |
+|   sw   s1, 4(sp)     # Spill                               |
+|                                                            |
+|   lw   s1, 4(sp)     # EPILOG: Restore s1                  |
+|   lw   s0, 8(sp)     #         Restore s0                  |
+|   lw   ra, 12(sp)    #         Restore ra                  |
+|   addi sp, sp, 16    #         Deallocate frame            |
+|   ret                                                       |
++------------------------------------------------------------+
+```
+
+### Stack Frame Layout
+
+```
+        High Address
+        +------------------+
+        | Caller's Frame   |
+        +------------------+ <- sp (before call)
+        | Return Addr (ra) | \
+        +------------------+  |
+        | Saved s0 (fp)    |  |
+        +------------------+  | Callee-saved
+        | Saved s1         |  | registers
+        +------------------+  |
+        | ...              |  |
+        +------------------+  |
+        | Saved s11        | /
+        +------------------+
+        | Spill Slot 0     | \
+        +------------------+  | Spill area
+        | Spill Slot 1     |  | (from RegAlloc)
+        +------------------+  |
+        | ...              | /
+        +------------------+
+        | Local Variables  |
+        +------------------+
+        | Outgoing Args    | (if calls others)
+        +------------------+ <- sp (after prolog)
+        | Callee's Frame   |
+        +------------------+
+        Low Address
+
+Frame Size = callee_saved_space + spill_space +
+             locals_space + outgoing_args_space +
+             alignment_padding (align to 16 bytes)
+```
+
+### PEI Algorithm
+
+```
+1. Gather Information
+   - Scan function for used callee-saved registers
+   - Get spill space size from RegAlloc
+   - Check if function makes calls (need ra)
+
+2. Compute Frame Size
+   frame_size = 0
+   IF uses_ra OR makes_calls:
+     frame_size += 8
+   FOR each used callee-saved reg:
+     frame_size += 8
+   frame_size += spill_area_size
+   frame_size = ALIGN(frame_size, 16)
+
+3. Insert Prolog (at function entry)
+   emit: addi sp, sp, -frame_size
+   FOR each used callee-saved reg r:
+     emit: sw r, offset(sp)
+
+4. Insert Epilog (before each return)
+   FOR each used callee-saved reg r:
+     emit: lw r, offset(sp)
+   emit: addi sp, sp, frame_size
+```
+
+### References
+
+- **Prolog/Epilog Insertion**: `llvm/lib/CodeGen/PrologEpilogInserter.cpp`
+- **Frame Lowering**: `llvm/include/llvm/CodeGen/TargetFrameLowering.h`
+- **RISC-V Frame Lowering**: `llvm/lib/Target/RISCV/RISCVFrameLowering.cpp`
+- **Stack Frame Layout**: `llvm/lib/CodeGen/MachineFrameInfo.cpp`
+- **Calling Conventions**: `llvm/lib/Target/RISCV/RISCVCallingConv.td`
+- **RISC-V ABI Spec**: [RISC-V Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc)
+
+---
+
+## STAGE 6: Post-RA Optimizations & Phi Elimination
+
+### Overview
+
+After register allocation, several optimization passes clean up the generated code by removing redundancies and improving instruction sequences. This stage includes both phi elimination (covered here) and other post-RA optimizations.
+
+**Covered in this section:**
+
+- ✅ **Phi Elimination** - How SSA phi nodes are removed (detailed below)
+
+**To write:**
+
+- **Peephole optimization** - Removing redundant move instructions
+- **Branch optimization** - Branch folding, inversion, and simplification
+- **Dead code elimination** - Removing unused instructions after register allocation
+- **Block placement** - Optimal basic block ordering for better cache performance
+
+---
+
+### Phi Elimination
+
+#### What is Phi?
 
 ```
 Non-SSA:
@@ -716,110 +900,47 @@ Goal: Make coalescing succeed as often as possible
    - Insert empty blocks to simplify phi placement
 ```
 
+### References
+
+- **PHI Elimination**: `llvm/lib/CodeGen/PHIElimination.cpp`
+- **Register Coalescing**: `llvm/lib/CodeGen/RegisterCoalescer.cpp`
+- **Two-Address Instructions**: `llvm/lib/CodeGen/TwoAddressInstructionPass.cpp`
+- **Critical Edge Splitting**: `llvm/lib/CodeGen/MachineBasicBlock.cpp`
+- **LLVM Documentation**: [SSA-based Machine Code Optimizations](https://llvm.org/docs/CodeGenerator.html#ssa-based-machine-code-optimizations)
+
 ---
 
-## Prolog/Epilog Insertion
+## STAGE 7: Code Emission
 
-### When and Why
+### Overview
 
-```
-+------------------------------------------------------------+
-|              Prolog/Epilog Insertion (PEI)                 |
-+------------------------------------------------------------+
-| TIMING: Runs AFTER Register Allocation                     |
-|                                                            |
-| WHY: RegAlloc provides the "closing report":               |
-|   1. Which callee-saved registers were used?               |
-|   2. How much stack space for spills?                      |
-|   3. Need to save ra? (function makes calls?)              |
-|                                                            |
-| BEFORE PEI:                                                |
-|   add  a0, a1, a2    # Function body                       |
-|   mul  s0, a0, a3    # Uses s0 (callee-saved!)            |
-|   sw   s1, 4(sp)     # Spill                               |
-|   ret                                                       |
-|                                                            |
-| AFTER PEI:                                                 |
-|   addi sp, sp, -16   # PROLOG: Allocate frame             |
-|   sw   ra, 12(sp)    #         Save ra                     |
-|   sw   s0, 8(sp)     #         Save s0                     |
-|   sw   s1, 4(sp)     #         Save s1                     |
-|                                                            |
-|   add  a0, a1, a2    # Function body (unchanged)           |
-|   mul  s0, a0, a3                                          |
-|   sw   s1, 4(sp)     # Spill                               |
-|                                                            |
-|   lw   s1, 4(sp)     # EPILOG: Restore s1                  |
-|   lw   s0, 8(sp)     #         Restore s0                  |
-|   lw   ra, 12(sp)    #         Restore ra                  |
-|   addi sp, sp, 16    #         Deallocate frame            |
-|   ret                                                       |
-+------------------------------------------------------------+
-```
+Code emission is the final stage where MachineIR (machine instructions with physical registers) is converted to actual machine code in object file format (ELF, Mach-O, COFF).
 
-### Stack Frame Layout
+**Key components:**
 
-```
-        High Address
-        +------------------+
-        | Caller's Frame   |
-        +------------------+ <- sp (before call)
-        | Return Addr (ra) | \
-        +------------------+  |
-        | Saved s0 (fp)    |  |
-        +------------------+  | Callee-saved
-        | Saved s1         |  | registers
-        +------------------+  |
-        | ...              |  |
-        +------------------+  |
-        | Saved s11        | /
-        +------------------+
-        | Spill Slot 0     | \
-        +------------------+  | Spill area
-        | Spill Slot 1     |  | (from RegAlloc)
-        +------------------+  |
-        | ...              | /
-        +------------------+
-        | Local Variables  |
-        +------------------+
-        | Outgoing Args    | (if calls others)
-        +------------------+ <- sp (after prolog)
-        | Callee's Frame   |
-        +------------------+
-        Low Address
+- **MCStreamer**: Abstract interface for emitting directives and instructions
+- **MCCodeEmitter**: Encodes instructions to binary format
+- **MCAsmBackend**: Handles relocations and fixups
+- **MCObjectWriter**: Writes final object file format
 
-Frame Size = callee_saved_space + spill_space +
-             locals_space + outgoing_args_space +
-             alignment_padding (align to 16 bytes)
-```
+**Process:**
 
-### PEI Algorithm
+1. **Lowering**: Convert MachineInstr to MCInst (more detailed representation)
+2. **Relaxation**: Adjust instruction encoding (e.g., short vs. long branches)
+3. **Encoding**: Convert MCInst to byte sequences
+4. **Symbol resolution**: Handle labels, relocations, and external references
+5. **Section emission**: Write code, data, and metadata sections
 
-```
-1. Gather Information
-   - Scan function for used callee-saved registers
-   - Get spill space size from RegAlloc
-   - Check if function makes calls (need ra)
+**To write:**
 
-2. Compute Frame Size
-   frame_size = 0
-   IF uses_ra OR makes_calls:
-     frame_size += 8
-   FOR each used callee-saved reg:
-     frame_size += 8
-   frame_size += spill_area_size
-   frame_size = ALIGN(frame_size, 16)
+- Detailed MCStreamer API and usage patterns
+- Instruction encoding specifics for RISC-V
+- Relocation types and linker interaction
+- Debug information emission (DWARF)
+- Assembly printer vs. object file emission
+- Target-specific hooks and customization
 
-3. Insert Prolog (at function entry)
-   emit: addi sp, sp, -frame_size
-   FOR each used callee-saved reg r:
-     emit: sw r, offset(sp)
-
-4. Insert Epilog (before each return)
-   FOR each used callee-saved reg r:
-     emit: lw r, offset(sp)
-   emit: addi sp, sp, frame_size
-```
+**Reference:** See LLVM's `MC/` directory, `MCStreamer.h`, `MCCodeEmitter.h`, and target-specific implementations.
 
 ---
 
@@ -1142,3 +1263,34 @@ LUI   rd, imm            rd = imm << 12
 - Performance engineering mindset
 
 **Remember:** The best backend engineers understand the entire stack from silicon to software and optimize the bridge between them.
+
+---
+
+## Additional Resources
+
+### LLVM Core Documentation
+
+- [LLVM Code Generator](https://llvm.org/docs/CodeGenerator.html)
+- [TableGen Language Reference](https://llvm.org/docs/TableGen/index.html)
+- [Writing an LLVM Backend](https://llvm.org/docs/WritingAnLLVMBackend.html)
+- [LLVM Language Reference](https://llvm.org/docs/LangRef.html)
+
+### RISC-V Resources
+
+- [RISC-V Foundation](https://riscv.org/)
+- [RISC-V Software Repository](https://github.com/riscv)
+- [RISC-V Toolchain Documentation](https://github.com/riscv-collab/riscv-gnu-toolchain)
+
+### Research Papers
+
+- "A Retargetable Compiler for ANSI C" - Fraser & Hanson
+- "Engineering a Compiler" - Cooper & Torczon
+- "Modern Compiler Implementation in C" - Appel
+- "Superoptimizer: A Look at the Smallest Program" - Massalin
+
+### Source Code Study
+
+- RISC-V Backend: `llvm/lib/Target/RISCV/`
+- CodeGen Infrastructure: `llvm/lib/CodeGen/`
+- Target-Independent SelectionDAG: `llvm/lib/CodeGen/SelectionDAG/`
+- Machine IR: `llvm/include/llvm/CodeGen/Machine*.h`
