@@ -1,5 +1,5 @@
 +++
-title = "All About Cpp Strings"
+title = "All About C & C++ Strings"
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2025-11-20
 [taxonomies]
@@ -7,7 +7,7 @@ tags = ["cpp", "strings", "templates", "memory-management", "c++", "std-string",
 categories = ["cpp"]
 +++
 
-# All About Cpp Strings
+# All About C & C++ Strings
 
 ## Background
 
