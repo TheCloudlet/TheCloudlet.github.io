@@ -37,12 +37,25 @@ taxonomies = "on"
 anchors = "on"
 
 [extra]
+# Allow Google Analytics through CSP
+allowed_domains = [
+    { directive = "script-src", domains = ["*.googletagmanager.com", "*.google-analytics.com", "giscus.app"] },
+    { directive = "connect-src", domains = ["*.googletagmanager.com", "*.google-analytics.com", "*.analytics.google.com", "analytics.google.com"] },
+    { directive = "font-src", domains = ["'self'", "data:", "fonts.gstatic.com", "cdn.jsdelivr.net"] },
+    { directive = "img-src", domains = ["'self'", "data:", "https://*"] },
+    { directive = "frame-src", domains = ["giscus.app"] },
+    { directive = "style-src", domains = ["'self'", "giscus.app", "'unsafe-inline'"] },
+]
+
 author = "Yi-Ping Pan (Cloudlet)"
 keywords = ["compiler", "llvm", "mlir", "c++", "haskell", "optimization"]
 show_reading_time = true
 toc = true
 show_related_posts = true
 show_author = true
+
+# Google Analytics ID
+google_analytics_id = "G-7FD091QMK9"
 
 # Social links in footer
 socials = [
