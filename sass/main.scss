@@ -5,6 +5,9 @@
 // Import the theme's main stylesheet
 @use '../themes/tabi/sass/main.scss';
 
+// Import IBM Plex Sans
+@use 'plex.scss';
+
 // =============================================================================
 // 1. CSS Variables & Theme Overrides
 // =============================================================================
@@ -37,31 +40,6 @@
 // =============================================================================
 // 2. Font Declarations
 // =============================================================================
-
-// IBM Plex Sans - Body text
-@font-face {
-    font-family: 'IBM Plex Sans';
-    src: url('https://fonts.gstatic.com/s/ibmplexsans/v19/zYXgKVElMYYaJe8bpLHnCwDKhdHeFaxOedc.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'IBM Plex Sans';
-    src: url('https://fonts.gstatic.com/s/ibmplexsans/v19/zYX9KVElMYYaJe8bpLHnCwDKjSL9AIFsdP3pBms.woff2') format('woff2');
-    font-weight: 500;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'IBM Plex Sans';
-    src: url('https://fonts.gstatic.com/s/ibmplexsans/v19/zYX9KVElMYYaJe8bpLHnCwDKjWr8AIFsdP3pBms.woff2') format('woff2');
-    font-weight: 600;
-    font-style: normal;
-    font-display: swap;
-}
 
 // Intel One Mono - Code blocks
 @font-face {
