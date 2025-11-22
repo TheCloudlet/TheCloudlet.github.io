@@ -4,7 +4,7 @@ sort_by = "date"
 
 [extra]
 header = { title = "The Cloudlet" }
-section_path = "cpp/_index.md"
+section_path = "blog/_index.md"
 max_posts = 10
 +++
 
