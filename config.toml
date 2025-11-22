@@ -44,7 +44,7 @@ allowed_domains = [
     { directive = "font-src", domains = ["'self'", "data:", "fonts.gstatic.com", "cdn.jsdelivr.net"] },
     { directive = "img-src", domains = ["'self'", "data:", "https://*"] },
     { directive = "frame-src", domains = ["giscus.app"] },
-    { directive = "style-src", domains = ["'self'", "giscus.app", "'unsafe-inline'"] },
+    { directive = "style-src", domains = ["'self'", "giscus.app", "'unsafe-inline'", "fonts.googleapis.com"] },
 ]
 
 author = "Yi-Ping Pan (Cloudlet)"
