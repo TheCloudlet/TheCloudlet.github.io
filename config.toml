@@ -54,3 +54,20 @@ socials = [
 footer_menu = [
     { url = "about", name = "about", trailing_slash = true },
 ]
+
+# Giscus comments
+[extra.giscus]
+enabled_for_all_posts = true
+automatic_loading = true
+repo = "TheCloudlet/TheCloudlet.github.io"
+repo_id = "R_kgDOQXba0g"
+category = "Announcements"
+category_id = "DIC_kwDOQXba0s4CyEEv"
+mapping = "pathname"
+strict_title_matching = 0
+enable_reactions = 1
+comment_box_above_comments = false
+light_theme = "light"
+dark_theme = "dark"
+lang = "en"
+lazy_loading = true
