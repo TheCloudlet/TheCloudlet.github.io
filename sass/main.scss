@@ -14,7 +14,7 @@
 
 :root {
     // -- Fonts --
-    --code-font: 'Intel One Mono', monospace;
+    --code-font: 'Fira Code', monospace;
 
     // -- GitHub Dark Syntax Highlighting --
     // Overrides Tabi's Catppuccin colors
@@ -40,23 +40,6 @@
 // =============================================================================
 // 2. Font Declarations
 // =============================================================================
-
-// Intel One Mono - Code blocks
-@font-face {
-    font-family: 'Intel One Mono';
-    src: url('https://cdn.jsdelivr.net/gh/fonts-archive/IntelOneMono/IntelOneMono-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Intel One Mono';
-    src: url('https://cdn.jsdelivr.net/gh/fonts-archive/IntelOneMono/IntelOneMono-Bold.woff2') format('woff2');
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-}
 
 // =============================================================================
 // 3. Typography
@@ -111,6 +94,7 @@ article {
 
 // Code block styling
 pre {
+    font-family: var(--code-font);
     background-color: var(--codeblock-bg);
     color: var(--text);
 

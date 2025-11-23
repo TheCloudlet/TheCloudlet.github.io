@@ -13,21 +13,39 @@ categories = ["cpp"]
 
 When I was implementing [Coogle](https://github.com/TheCloudlet/Coogle), I discovered something bizarre about C++ strings. That is why I wrote this note to summarize what I learned about C++ strings.
 
-Coogle is a search engine that I implemented in C++. It is designed to quickly and efficiently find function signatures in large codebases.
+Coogle is a search engine that I implemented in C++. It is designed to quickly and efficiently find function signatures in large codebases—especially useful for 30-year-old C++ codebases that were migrated from C and mixed with C++11/14/17/20 features like my lovly everyday job.
 
-For example, there is a function signature like this:
+Since I like Haskell and pure functions, I tried to pay tribute to Hoogle, a Haskell function search engine. The idea is to be able to search for function signatures in C/C++ and get back a list of matching functions.
+
+First step, support simple types like: `int`, `char`. Okay that is not too hard.
 
 ```cpp
+// This is my test file
 int add(int a, int b);
+int std::string(std::string s);
 ```
 
-When I search "int(int, int)", Coogle should be able to find this signature quickly.
+I expect when I search "int(int, int)", Coogle should be able to find this signature quickly. So, implemented that, and it worked fine.
 
-However, when I search "std::string(std::string)" to find function signatures that take and return `std::string`, I found that Coogle could not find any results, even though there are many such functions in the codebase.
+But, when I try to search "std::string(std::string)" to find function signatures that take and return `std::string`, I found that Coogle could not find any results, even though there are many such functions in my test codebase.
 
-After some investigation, I realized that the issue was related to how C++ handles strings. In C++, `std::string` is actually a typedef for `std::basic_string<char>`, and there are some subtle differences in how these types are treated in function signatures.
+This is really a WTF moment for me.
 
-As a compiler engineer, strings and trees are my bread and butter. I decided to dig deeper into the C++ string implementation and document my findings here.
+I couldn't understand why and got stuck for a while, then I printed out the full AST tree using libclang. That's when I saw something confusing: `std::basic_string<char, std::char_traits<char>, std::allocator<char>>` showed up instead of `std::string`.
+
+What the heck is a trait and allocator? I don't understand C++ strings at all. I thought it was supposed to be just `std::string`!
+
+Well... So I dug deeper and read more about C++ strings.
+
+My initial thinking was to ask LLMs about C++ strings and designs. But since I work on legacy C and C++ code, and lots of my algorithms are implemented in C (for milking out best performance), I decided to first understand C strings and character types deeply.
+
+As, Jserv alwasy says in [C Programming series](https://hackmd.io/@sysprog/c-programming):
+
+> Be honest with yourself. You don't know C.
+
+So, before we tackle std::string, let's be honest with ourselves and look at the chaos of char. Everything below is based on my reseach using differnt resources, including language standards, articles.
+
+That not maybe 100% accurate, but I tried my best to summarize what I learned. If you find any mistakes, please kindly point them out to me.
 
 ---
 
