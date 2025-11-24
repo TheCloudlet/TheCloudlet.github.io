@@ -4,6 +4,7 @@ template = "page.html"
 date = 2024-01-01
 [extra]
 hide_from_list = true
+toc = false
 +++
 
 # Hi, I'm Yi-Ping Pan

@@ -68,6 +68,12 @@ footer_menu = [
     { url = "about", name = "about", trailing_slash = true },
 ]
 
+menu = [
+    { name = "blog", url = "blog", trailing_slash = true },
+    { name = "tags", url = "tags", trailing_slash = true },
+    { name = "about", url = "about", trailing_slash = true },
+]
+
 # Giscus comments
 [extra.giscus]
 enabled_for_all_posts = true
