@@ -139,6 +139,23 @@ People have different implementations for string handling in C, just like the Li
 
 Therefore, C++'s `std::string` is not the only solution to C string problems—but understanding its design can be helpful for compiler, library, and systems programmers.
 
+**Update**: Community Insights (2025-11-26)
+
+For the nul-terminated string design, some kind comments on Reddit pointed out that:
+
+> Because in ye olden days a one byte length wasn't large enough to represent long strings, but using more bytes for the length field was inefficient for short strings. And I guess no one wanted the complexity of a variable length encoding for the length prefix. And so we live with the pain of null terminated strings today. \
+> &mdash; u/Kered13
+
+Also, thanks to u/vip17 for pointing out these excellent resources for diving deeper into the history:
+
+> There are lots of places that explain the history of C's null-terminated strings: \
+>
+> - [Null-terminated strings on the PDP-7 (retrocomputing.stackexchange)](https://retrocomputing.stackexchange.com/questions/24855/null-terminated-strings-on-the-pdp-7) \
+> - [Why did C and Linux API use null-terminated strings? (reddit r/cpp_questions)](https://www.reddit.com/r/cpp_questions/comments/qlzho1/why_did_c_and_linux_api_use_nullterminated_strings/) \
+> - [Why do strings in C need to be null terminated? (stack overflow)](https://stackoverflow.com/questions/2221304/why-do-strings-in-c-need-to-be-null-terminated)
+
+It seems the struggle between efficiency and simplicity has been with us since the dawn of C.
+
 ---
 
 ## PART 2: std::string and the Template Monster
@@ -332,6 +349,36 @@ Linux avoids this check completely. The `d_name.name` pointer (inside `struct qs
 - Cache Line: Also, notice the comments about 64-byte alignment. The buffer size is calculated so the whole struct fits perfectly into a CPU cache line.
 
 This shows that for System Programmers, Memory Layout isn't just about saving bytes—it's about saving CPU cycles.
+
+**Update**: Community Insights (2025-11-26)
+
+Question from Reddit:
+
+> If you avoid a branch, but gain a pointer indirection, how big win is that in the end, considering the branch prediction that modern CPU are capable of? \
+> u/Supadoplex
+
+Answer or trying to answer:
+
+I don't know the exact answer, but here is my research.
+It depends on predictability vs cache locality:
+
+Branch misprediction cost:
+
+- Modern x86 (Skylake/Zen): ~15-20 cycles (per Agner Fog's measurements)
+- Older architectures: can be 30+ cycles
+
+Pointer indirection cost:
+(Numbers from [agner.org](https://www.agner.org/optimize/))
+
+- L1 cache hit: ~4-5 cycles (Intel/AMD spec)
+- L2 hit: ~12 cycles
+- L3 hit: ~40 cycles
+- RAM miss: 200+ cycles
+
+So...
+
+> If your branch is unpredictable (<80% hit rate) and your pointer data is cache-resident, indirection usually wins.
+> &mdash; Cloudlet
 
 **Customize size of SSO buffer**
 
