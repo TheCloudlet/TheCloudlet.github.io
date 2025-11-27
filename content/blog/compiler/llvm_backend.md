@@ -1,12 +1,19 @@
 +++
-title = "RISC-V Compiler Backend Complete Reference"
+title = "[WIP] RISC-V Compiler Backend Complete Reference"
 description = "A comprehensive guide covering instruction selection, register allocation, and instruction scheduling for LLVM backend engineers"
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2025-11-22
+
 [taxonomies]
 tags = ["llvm", "compiler", "risc-v", "backend", "optimization"]
 categories = ["compiler"]
 +++
+
+# [WIP] RISC-V Compiler Backend Complete Reference
+
+**Disclaimer: This is WIP (work-in-progrsss) personal note.**
+
+There are still a lot of points that might still need clarafacation. I'll use my free time to turn this note into better readible artitle.
 
 ## Why Specialized Compiler Teams Matter
 

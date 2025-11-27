@@ -2,6 +2,7 @@
 title = "Back to Basics: From C char to string_view (Notes from building Coogle)"
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2025-11-20
+
 [taxonomies]
 tags = ["c", "cpp", "strings", "memory-management", "pmr", "allocators", "vfs"]
 categories = ["cpp"]
