@@ -156,6 +156,18 @@ Also, thanks to u/vip17 for pointing out these excellent resources for diving de
 
 It seems the struggle between efficiency and simplicity has been with us since the dawn of C.
 
+**Update**: The Memory's Perspective (2025-11-27)
+
+Although we say `byte` is the smallest addressable unit of memory, I found out that in DRAM chips, the smallest unit that can be read/written is actually a `word` (typically 4 or 8 bytes). The concept of `byte` is more of a logical abstraction provided by the CPU architecture or ISA.
+
+When the CPU accesses memory, it reads/writes in chunks of words. The memory controller then breaks these words down into bytes for the CPU to process. This means that even though we work with bytes in our code, under the hood, the memory system operates on larger units.
+
+In the following reference, there is a detailed explanation of how memory systems work, including the concepts of cache lines, memory hierarchy, and how data is fetched from DRAM to CPU caches.
+
+Reference: [Paper: What Every Programmer Should Know About Memory](https://people.freebsd.org/~lstewart/articles/cpumemory.pdf)
+
+So, the answer to "Why C char are designed this way?" Is to fit the basic unit of memory access in **ISA/CPU architecture** while providing a simple abstraction for programmers to work with text data.
+
 ---
 
 ## PART 2: std::string and the Template Monster
