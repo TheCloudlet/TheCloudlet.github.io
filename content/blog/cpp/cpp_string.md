@@ -60,7 +60,7 @@ Starting with my conclusion.
 
 Or maybe through the lens of VHDL we can see more clearly:
 
-```vhdl
+```
 library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;

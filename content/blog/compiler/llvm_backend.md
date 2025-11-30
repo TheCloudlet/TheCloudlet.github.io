@@ -21,7 +21,7 @@ There are still a lot of points that might still need clarafacation. I'll use my
 
 Modern SoC companies need compiler teams because **hardware differentiation requires software optimization**.
 
-```text
+```
 +----------------------+-------------------------+
 | Open Source Backend  | Commercial Backend      |
 +----------------------+-------------------------+
@@ -37,7 +37,7 @@ Modern SoC companies need compiler teams because **hardware differentiation requ
 
 ### The Compiler Engineer's Three Missions
 
-```text
+```
            Compiler Engineer's Core Responsibilities
                            |
         +------------------+------------------+
@@ -75,7 +75,7 @@ unsigned RISCVSubtarget::getInstrLatency(unsigned Opcode) {
 
 RISC-V's extensibility allows competitive advantage through private instructions:
 
-```text
+```
 Standard RISC-V + Company Secret Sauce
       |                    |
    RV64GC            Custom Crypto/ML/DSP
@@ -97,7 +97,7 @@ Bridge hardware and software:
 
 ### Load-Store Architecture
 
-```text
+```
 +--------------------------------------------------------+
 |                RISC Load-Store Architecture            |
 |                                                        |
@@ -118,7 +118,7 @@ Bridge hardware and software:
 
 All base instructions are 32 bits:
 
-```text
+```
 R-Type (add rd, rs1, rs2):
  31      25|24  20|19  15|14 12|11   7|6     0
  +---------+------+------+-----+------+-------+
@@ -167,7 +167,7 @@ Callee-Saved: MUST preserve if used (requires prolog/epilog)
 
 ### The Seven-Stage Pipeline
 
-```text
+```
 +------------------------------------------------------------+
 |                LLVM Backend 7-Stage Pipeline               |
 +------------------------------------------------------------+
@@ -230,7 +230,7 @@ Callee-Saved: MUST preserve if used (requires prolog/epilog)
 
 ### Stage I/O
 
-```text
+```
 +----------+---------------------------+---------------------------+
 | Stage    | Input                     | Output                    |
 +----------+---------------------------+---------------------------+
@@ -259,7 +259,7 @@ Callee-Saved: MUST preserve if used (requires prolog/epilog)
 
 ### Why This Order?
 
-```text
+```
 ISel first: Need target instructions before scheduling
   |
   v
@@ -341,7 +341,7 @@ ISel picks Pattern 2 if: Cost(MADD) < Cost(MUL) + Cost(ADD)
 
 ### TableGen Implementation
 
-```tablegen
+```cpp
 // Define instruction encoding
 class RVInstR<bits<7> funct7, bits<3> funct3, bits<7> opcode> {
   bits<5> rd;
@@ -1166,7 +1166,7 @@ dotproduct_opt:
 
 **Scenario:** Your CPU has custom multiply-accumulate instruction
 
-```tablegen
+```cpp
 // Define custom instruction
 def MACC : RVInstR4<0b1000011, 0b000, OPC_CUSTOM_0,
                     (outs GPR:$rd),
