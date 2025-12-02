@@ -1,5 +1,6 @@
 +++
 title = "Introducing Coogle: Bringing Haskell's Hoogle to C++"
+description = "Building a type signature search engine for C++ inspired by Haskell's Hoogle—tackling libclang AST traversal, template canonicalization, and performance optimization"
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2025-12-02
 

@@ -1,5 +1,6 @@
 +++
 title = "Back to Basics: From C char to string_view (Notes from building Coogle)"
+description = "A deep dive into C++ string internals—from C char types and encoding chaos to std::string, SSO optimization, string_view, and PMR allocators"
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2025-11-20
 
