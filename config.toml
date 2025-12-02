@@ -37,6 +37,9 @@ taxonomies = "on"
 anchors = "on"
 
 [extra]
+# Custom CSS for readability
+stylesheets = ["custom.css"]
+
 # Favicon
 favicon_emoji = "💠"
 

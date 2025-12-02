@@ -1,0 +1,56 @@
+/* System font stack for maximum readability */
+:root {
+    /* Sans-serif for body text - uses system default */
+    --sans-serif-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+    /* Serif for emphasis (optional, can keep as sans-serif too) */
+    --serif-font: Georgia, Cambria, "Times New Roman", Times, serif;
+
+    /* Monospace for code - Fira Code for better alignment */
+    --code-font: "Fira Code", "Fira Mono", monospace;
+}
+
+/* Improve readability - responsive font size */
+body {
+    line-height: 1.7;
+    font-size: 17px;  /* Increased from 16px for better mobile readability */
+}
+
+/* Larger font on desktop */
+@media (min-width: 768px) {
+    body {
+        font-size: 18px;
+    }
+}
+
+/* Better spacing for paragraphs */
+article p {
+    margin-bottom: 1.5em;
+}
+
+/* Optimal line length for readability (60-75 characters) */
+article {
+    max-width: 70ch;
+}
+
+/* Make code blocks more readable */
+code {
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+pre code {
+    font-size: 0.85em;
+    line-height: 1.6;
+}
+
+/* Better mobile readability */
+@media (max-width: 767px) {
+    body {
+        line-height: 1.6;
+    }
+
+    article {
+        max-width: 100%;
+    }
+}
