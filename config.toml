@@ -52,10 +52,10 @@ allowed_domains = [
 
 author = "Yi-Ping Pan (Cloudlet)"
 keywords = ["compiler", "llvm", "mlir", "c++", "haskell", "optimization"]
-show_reading_time = true
+show_reading_time = false
 toc = true
 show_related_posts = true
-show_author = true
+show_author = false
 
 # Google Analytics ID
 google_analytics_id = "G-7FD091QMK9"

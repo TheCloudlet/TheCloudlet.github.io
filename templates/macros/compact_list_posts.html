@@ -1,0 +1,39 @@
+{% macro compact_list_posts(posts, max=999999, language_strings="") %}
+<div class="compact-posts-list">
+    {% for post in posts %}
+        {% if loop.index <= max %}
+            <div class="compact-post-item">
+                <time datetime="{{ post.date }}">{{ post.date | date(format="%Y-%m-%d") }}</time>
+                <a href="{{ post.permalink }}">{{ post.title }}</a>
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>
+
+<style>
+.compact-posts-list {
+    margin: 2rem 0;
+}
+
+.compact-post-item {
+    display: flex;
+    gap: 1rem;
+    margin: 0.5rem 0;
+    align-items: baseline;
+}
+
+.compact-post-item time {
+    color: var(--text-muted, #666);
+    font-size: 0.9rem;
+    min-width: 6rem;
+}
+
+.compact-post-item a {
+    text-decoration: none;
+}
+
+.compact-post-item a:hover {
+    text-decoration: underline;
+}
+</style>
+{% endmacro %}

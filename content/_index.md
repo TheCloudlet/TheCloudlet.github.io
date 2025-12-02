@@ -5,6 +5,8 @@ sort_by = "date"
 [extra]
 section_path = "blog/_index.md"
 max_posts = 10
+show_reading_time = false
+show_author = false
 +++
 
 I'm a compiler engineer at Synopsys working on VHDL compilers.

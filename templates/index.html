@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "macros/compact_list_posts.html" as compact_macros %}
+{% import "macros/translate.html" as macros_translate %}
+
+{% block main_content %}
+<main class="index-main">
+    <article>
+        <div class="index-content">
+            {{ section.content | safe }}
+        </div>
+
+        {% if section.extra.section_path %}
+            {% set blog_section = get_section(path=section.extra.section_path) %}
+            {% set max_posts = section.extra.max_posts | default(value=10) %}
+
+            <h2>Recent Posts</h2>
+            {{ compact_macros::compact_list_posts(posts=blog_section.pages, max=max_posts) }}
+
+            <div style="margin-top: 2rem;">
+                <a href="{{ get_url(path='blog') }}">All posts →</a>
+            </div>
+        {% endif %}
+    </article>
+</main>
+{% endblock main_content %}
