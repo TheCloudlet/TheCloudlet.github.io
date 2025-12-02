@@ -37,6 +37,9 @@ taxonomies = "on"
 anchors = "on"
 
 [extra]
+# Favicon
+favicon_emoji = "💠"
+
 # Allow Google Analytics through CSP
 allowed_domains = [
     { directive = "script-src", domains = ["*.googletagmanager.com", "*.google-analytics.com", "giscus.app"] },
