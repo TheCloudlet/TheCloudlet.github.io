@@ -54,3 +54,47 @@ pre code {
         max-width: 100%;
     }
 }
+
+/* Related posts section */
+.related-posts {
+    margin-top: 3em;
+    padding-top: 2em;
+    border-top: 1px solid var(--divider, #e0e0e0);
+}
+
+.related-posts h2 {
+    font-size: 1.5em;
+    margin-bottom: 1em;
+    font-weight: 600;
+}
+
+.related-posts ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.related-posts li {
+    margin-bottom: 1.5em;
+    padding: 0;
+}
+
+.related-posts a {
+    font-size: 1.1em;
+    font-weight: 450;
+    text-decoration: none;
+    color: #000;
+    display: block;
+    margin-bottom: 0.25em;
+}
+
+.related-posts a:hover {
+    text-decoration: underline;
+}
+
+.related-posts p {
+    margin: 0.25em 0 0 0;
+    font-size: 0.9em;
+    color: var(--text-secondary, #555);
+    line-height: 1.5;
+}
