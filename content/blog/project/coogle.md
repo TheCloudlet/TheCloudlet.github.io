@@ -193,7 +193,7 @@ I sketched out how data would flow through Coogle. Following the functional prog
                            |
                            | Extract function declarations
                            | Build actual signature
-                   isSigntureMatch()
+                   isSigntaureMatch()
                            | Output: List<Match>
                            |     where Match = {file, line, name, sig}
                            v
