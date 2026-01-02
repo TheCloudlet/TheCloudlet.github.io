@@ -23,6 +23,17 @@ Based on CSAPP Chapter 6: The Memory Hierarchy
 5. Why are smaller caches faster? Why can't we make all caches as fast as L1?
 6. What kind of programs have good locality? What kind of programs have poor locality?
 
+other:
+
+1. What is firmware?
+2. Can you draw CPU, bus interface, I/O bridge, memory bus, I/O bus, memory archetructure graph?
+
+To ask
+
+1. what is memory mapped io?
+2. why rom (ssd) cannot modify one byte only?
+3.
+
 ## Week 1 Day 3-4: Cache Basics
 
 **CSAPP 6.4: Cache Memories**
