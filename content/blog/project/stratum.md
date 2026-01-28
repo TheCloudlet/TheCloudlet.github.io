@@ -1,8 +1,8 @@
 +++
-title = "Stratum: FIXME"
-description = "TODO"
+title = "Stratum: Architecting a Configurable Cache Simulator with C++ and Racket"
+description = "Using Lisp to manage complexity in high-performance memory modeling."
 author = "Yi-Ping Pan (Cloudlet)"
-date = 2026-01-02
+date = 2026-01-29
 draft = true
 
 [taxonomies]
@@ -10,297 +10,196 @@ tags = ["c", "cpp", "template", "cache", "simulation", "dsl"]
 categories = ["cpp", "project"]
 +++
 
-## FIXME
+## The Interview That Changed Everything
 
-True story.
+During a recent interview, the conversation started well. The interviewer asked about my open-source contribution to [rv32emu](https://github.com/sysprog21/rv32emu)—specifically, how I achieved 52% faster lookups and 35% faster insertions in the red-black tree implementation ([commit 434c466](https://github.com/sysprog21/rv32emu/commit/434c46660f67c78d9a4f587e05d2d59ec2102dc0)).
 
-The story starts from an interview. When the interviewer asked about my open-source contribution in [rv32emu](https://github.com/sysprog21/rv32emu), specifically how I achieved the 52% find and 35% insert performance improvement ([commit](https://github.com/sysprog21/rv32emu/commit/434c46660f67c78d9a4f587e05d2d59ec2102dc0)), my brain immediately started searching for the answer from memory. (Yes, memory, excuse for my poor humor)
+My brain immediately started searching for the answer from _memory_—both the biological kind and the DRAM kind. Since I'd explained this optimization before, the answer was already cached:
 
-Since I'd already answered this question a few times before, the explanation just came out pretty naturally. All the following text just flows through, I must have already cached this:
+**The optimization:** Eliminate the parent pointer from each node, shrinking node size by 20%. Fewer bytes per node means better cache density.
 
-The key insight? Memory layout. Since all the `map_node` structures are stored in a memory pool, the more compact we pack them, the better our cache performance. Simple as that.
+**The technique:** Instead of storing parent pointers in every node, maintain a path array on the stack during tree traversal. The path array stays hot in L1 cache, while the old approach scattered parent pointers across the heap, causing cache misses at every step.
 
-```C
-// Old node structure
+```c
+// Old: 3 pointers per node
 struct map_node {
     void *key, *data;
-
-    // 3 tree navigation pointers
-    unsigned long parent_color;  // parent pointer + color
+    unsigned long parent_color;
     struct map_node *left, *right;
 };
 
-// New node structure
+// New: 2 pointers per node
 struct map_node {
     void *key, *data;
-
-    // two tree navigation pointers
-    struct map_node *left, *right_red;  // right pointer + color
+    struct map_node *left, *right_red;
 };
-```
 
-By eliminating the parent pointer, we shave off 8 bytes per node. That's a 20% reduction in node size—which translates directly to fewer cache misses.
-
-But without parent pointers, how do you traverse back up the tree during insertions and deletions? That's where jemalloc's approach comes in. Instead of storing parent pointers in every node, I maintain a path array on the stack during traversal:
-
-```C
-// Insert: single pass with path tracking
+// Path tracking on stack (stays in L1)
 rb_path_entry_t path[RB_MAX_DEPTH];
 for (pathp = path; pathp->node; pathp++) {
-    // Store comparison result and navigate down
     pathp->cmp = (rb->comparator)(node->key, pathp->node->key);
-}
-// Unwind and fix colors in single pass going back up
-for (pathp--; (uintptr_t) pathp >= (uintptr_t) path; pathp--) {
-    // Fix colors going back up
 }
 ```
 
-The path array is stack-allocated and accessed sequentially—basically, it stays hot in L1 cache the entire time. Compare that to the old approach: following parent pointers through random locations scattered across the heap, causing cache misses at every step.
+Simple, clean, and—I thought—demonstrated solid understanding of cache behavior.
 
-That's essentially how the speedup happened.
+If there were a camera rolling, I probably had a pretty confident smile on my face. Then the interviewer asked the next question:
 
-At that time, If there were a camera rolling, I must have a pretty confident smile on my face, but the interviewer asked the next question?
+> **"What is the main cause of cache-miss latency?"**
 
-> So, what is the main cause of cache-miss latency in the cache?
+Well, I replied. (Also from my cache.)
 
-Well, I replied. (Also from my cache.) Well, if we cannot find the data from the address we query in L1, we will fallback to find the address in L2 cache. Also, L2 cache is usually bigger than L1, so finding an address from L2 cache is slower than L1 cache.
+"If we can't find data in L1, we fall back to L2. And since L2 is usually bigger than L1, finding an address in L2 is slower."
 
-Seems rational, right?
+Seemed reasonable, right?
 
-The interviewer then asked?
+> **"If L2 is the same size as L1, where does the latency difference come from?"**
 
-> So if the L2 size is exactly the same size as L1, where does the latency come from?
+"Physical distance," I replied. "The wire length from CPU to L1 versus L2."
 
-I replied.
+The interviewer paused, then continued:
 
-> Physical latency, from CPU to L1 cache and to L2 cache.
+> **"What if you ran your benchmark on an ARM big.LITTLE SoC instead of x86?"**
+> **"What if the cache associativity changed?"**
+> **"What if the replacement policy was different?"**
 
-This is definitely a wrong answer. And the interviewer kept on asking.
+My smile faded. If this were a cartoon, there'd be question marks floating above my head.
 
-> Also, for your benchmark for red-black tree implementation, if you are not running on an x86 host but running on a SoC chip powered by ARM big.LITTLE cores?
-> What if the associativity of the caches changes?
-> Or what if the replacement policy has changed?
+That's when I realized: I could optimize _for_ cache behavior, but I didn't actually understand _how_ caches work.
 
-Okay, that is the time that I know: I have no understanding of what the F is a cache, or memory hierarchy.
+My rb-tree optimization succeeded on one machine with one cache configuration. I had no idea if it would work anywhere else—or why.
+
+---
 
 ## Back to the basics: Study Cache in a Software Engineer's Perspective
 
-(This section is my notes, if you understan cache, please consider skip this section)
+After that interview, I needed to understand caches from first principles. I started with CS:APP Chapter 6 ([book](https://www.cs.sfu.ca/~ashriram/Courses/CS295/assets/books/CSAPP_2016.pdf), [lectures](https://www.youtube.com/watch?v=vusQa4pfTFU))—the canonical resource for cache architecture.
 
-When studing how cache really worked. I look up via one of the "Golden" books discussing Cache is Computer Systems: A Programmer's Perspective (CS:APP) from Carnegie Mellon University.
+### The Fundamentals That Matter
 
-The contents are available
+**Cache Structure: It's Just a 2D Array**
 
-- [Book](https://www.cs.sfu.ca/~ashriram/Courses/CS295/assets/books/CSAPP_2016.pdf)
-- [Course Video](https://www.youtube.com/watch?v=vusQa4pfTFU)
-
-In brief, Ch6.1 explained differnt storage technologies, from disk, DRAM, SRAM, SSD.
-
-Ch6.2 explain the core fundamental of writing fast code -- locality. To be more specific. time locality and spacial locality.
-
-Ch6.3 The memory hierarchy
+A cache is organized as S sets × E ways. Each cache line contains three fields:
 
 ```
-+---------------------------------+
-|  Regs (register file)           |
-+---------------------------------+    ^
-|  L1 cache (SRAM)                |    | Smaller, fast,
-+---------------------------------+    | and expensive
-|  L2 cache (SRAM)                |    | (per byte)
-+---------------------------------+    |
-|  L3 cache (SRAM)                |
-+---------------------------------+
-|  Main Memory (DRAM)             |    | Larger, slower
-+---------------------------------+    | and cheaper
-|  Local secondary storage (SSD)  |    | (per byte)
-+---------------------------------+    v
-|  Remote secondary storage       |
-|  (Distributed FS, Web Server)   |
-+---------------------------------+
-```
-
-| Type           | What cached            | Where cached          | Latency (cycles) | Managed by          |
-|----------------|------------------------|-----------------------|------------------|---------------------|
-| CPU registers  | 4-byte or 8-byte words | On-chip CPU registers | 0                | Compiler            |
-| TLB            | Address translations   | On-chip TLB           | 0                | Hardware MMU        |
-| L1 cache       | 64-byte blocks         | On-chip L1 cache      | 4                | Hardware            |
-| L2 cache       | 64-byte blocks         | On-chip L2 cache      | 10               | Hardware            |
-| L3 cache       | 64-byte blocks         | On-chip L3 cache      | 50               | Hardware            |
-| Virtual memory | 4-KB pages             | Main memory           | 200              | Hardware + OS       |
-| Buffer cache   | Parts of files         | Main memory           | 200              | OS                  |
-| Disk cache     | Disk sectors           | Disk controller       | 100,000          | Controller firmware |
-| Network cache  | Parts of files         | Local disk            | 10,000,000       | NFS client          |
-| Browser cache  | Web pages              | Local disk            | 10,000,000       | Web browser         |
-| Web cache      | Web pages              | Remote server disks   | 1,000,000,000    | Web proxy server    |
-
-*Table: The ubiquity of caching in modern computer systems (adapted from CS:APP Figure 6.23)*
-
-Ch4 explain how data is functionally saved in cache. First an address is splitted into three parts:
-
-```
-Address:
-+------------------+------------------+------------------+
-|      t bits      |      s bits      |      b bits      |
-+------------------+------------------+------------------+
-        Tag             Set index         Block offset
-
-Where:
-  - Tag (t bits):        Identifies which block within a set
-  - Set index (s bits):  Selects which set in the cache
-  - Block offset (b bits): Selects byte within the block
-
-Example: 32-bit address, 64-byte blocks, 256 sets, 8-way cache
-  - Block offset: 6 bits  (log2(64) = 6)
-  - Set index:    8 bits  (log2(256) = 8)
-  - Tag:         18 bits  (32 - 6 - 8 = 18)
-```
-
-The hardware cache is organized as a 2D array of **sets** and **ways** (associativity). Each cache line stores three components: a valid bit, a tag, and the actual data block.
-
-```
-          1 valid bit   t tag bits      B = 2^b bytes
+         1 valid bit   t tag bits      B = 2^b bytes
           per line      per line        per cache block
           +-------+------------------+---+---+-----+-----+
-  Set 0:  | Valid |       Tag        | 0 | 1 | ... | B-1 |
-          +-------+------------------+---+---+-----+-----+   E lines per set
-          | Valid |       Tag        | 0 | 1 | ... | B-1 |
+  Set 0:  | Valid |       Tag        | 0 | 1 | ... | B-1 |  <- Way 0
           +-------+------------------+---+---+-----+-----+
-
+  Set 1:  | Valid |       Tag        | 0 | 1 | ... | B-1 |  <- Way 1
           +-------+------------------+---+---+-----+-----+
-  Set 1:  | Valid |       Tag        | 0 | 1 | ... | B-1 |
-          +-------+------------------+---+---+-----+-----+   E lines per set
-          | Valid |       Tag        | 0 | 1 | ... | B-1 |
-          +-------+------------------+---+---+-----+-----+
-                            .
-                            .
-                            .
+                            ...
           +-------+------------------+---+---+-----+-----+
 Set S-1:  | Valid |       Tag        | 0 | 1 | ... | B-1 |
-          +-------+------------------+---+---+-----+-----+   E lines per set
-          | Valid |       Tag        | 0 | 1 | ... | B-1 |
           +-------+------------------+---+---+-----+-----+
 
-Cache size:  C = S × E × B data bytes
+Cache size: C = S × E × B data bytes
 ```
 
-**What is Associativity?**
+**Example:** 8-way set-associative, 256 sets, 64-byte blocks
+-> 256 × 8 × 64 = 128 KB cache
 
-Associativity (E-way) determines how many cache lines in a set can hold data for the same set index. It's a trade-off between conflict misses and hardware complexity.
+**Associativity:** The Trade-off I Missed
 
-**Three types:**
+This is what the interviewer was asking about. Associativity (E-way) determines how many cache lines in a set can hold data:
 
-1. **Direct-mapped (E=1, 1-way)**:
-   - Each memory block maps to exactly ONE cache line
-   - Fastest (no way selection needed)
-   - Most conflict misses (two blocks with same set index fight for one slot)
+1. **Direct-mapped (E=1)**: Each address maps to exactly ONE location
+   - Fastest (no way selection)
+   - Most conflict misses
 
-2. **N-way set-associative (E=N)**:
-   - Each memory block can go into any of N cache lines in the set
-   - Reduces conflict misses (more choices)
-   - Requires parallel tag comparison across N ways + multiplexer
+2. **N-way set-associative (E=N)**: Each address can go into N locations within a set
+   - Hardware checks all N tags in parallel
+   - Requires N-input multiplexer -> higher latency
 
-3. **Fully-associative (E=S, only 1 set)**:
-   - Any memory block can go anywhere in the cache
-   - No conflict misses (maximum flexibility)
-   - Slowest and most expensive (compare against ALL cache lines)
+3. **Fully-associative**: Any address can go anywhere
+   - No conflict misses
+   - Slowest (compare against ALL cache lines)
 
-**Example: 8-way set-associative cache**
-- S = 256 sets, E = 8 ways per set
-- A memory block maps to one of 256 sets (determined by set_index)
-- Within that set, it can occupy any of the 8 cache lines
-- Hardware checks all 8 tags in parallel to find a match
+**Now the interviewer's question made sense:**
 
-**Why higher associativity in L2/L3?**
-- L1: Speed critical -> lower associativity (4-8 way)
-- L2/L3: Miss penalty dominates -> higher associativity (16-way) to reduce conflict misses
+Same size, different latency -> different associativity -> different tag comparison circuitry.
 
-When caching data (writing to cache), we
+L2 isn't slower because it's "bigger"—it's slower because it's 16-way instead of 8-way.
 
-**Cache Write Process (storing data):**
+### The Recursive Pattern
 
-1. **Select which set** according to the address:
+**Cache Read Process:**
 
-   $$\text{set\_index} = \left\lfloor \frac{\text{address}}{B} \right\rfloor \bmod S$$
-
-   Where:
-   - $B = 2^b$ (block size in bytes)
-   - $S = 2^s$ (number of sets)
-
-   Or using bit operations (hardware implementation):
-
-   ```cpp
-   set_index = (address >> b) & (S - 1)
-   ```
-
-2. **Choose a cache line** within the set to replace (according to line replacement policy: LRU, FIFO, Random)
-
-3. **Write the data** into the selected cache line:
-   - Set valid bit = 1
-   - Store tag = `address >> (b + s)`
-   - Store data block
-
-**Cache Read Process (retrieving data):**
-
-1. **Select the set** using the same set_index calculation
-
-2. **Check all ways** in the set:
-   - Compare the address tag with each cache line's stored tag
-   - Check if valid bit = 1
-
+1. **Select the set** using set_index
+2. **Check all ways** in the set (parallel tag comparison)
 3. **Handle the result:**
-   - **Cache hit**: Tag matches and valid -> return data from cache line
-   - **Cache miss**: Tag not found -> fetch from next level (L2, L3, or DRAM), then store in current cache
+   - **Cache hit**: Return data immediately
+   - **Cache miss**:
+     1. **Fetch from next level** (L2, L3, or DRAM)
+     2. **Store in current cache** (allocate a line, evict if needed)
+     3. **Return data** to CPU
 
-Okay, to be honest, this looks like a recursive process to me. Learned from SICP Ch1.2.1 [Book (pdf)](https://web.mit.edu/6.001/6.037/sicp.pdf). So maybe let's try to using SICP's perspective to write our simulator.
+Wait. Step 3 is interesting.
 
-Other resources:
+When L1 misses, it asks L2. When L2 misses, it asks L3. When L3 misses, it asks DRAM. Each level follows the same pattern: check locally, delegate on miss.
 
-Let's just explaining Ch6.5 writing cache-friendly code and Ch6.6 the memory mountain, I believe this is trivial and an experience engineer often does this without thinking.
+This is a **recursive process**—the same pattern SICP Chapter 1.2 describes as "deferred operations that build up." Each cache level is a function that either returns data or calls the next level.
 
+```scheme
+; Cache lookup as recursive process (SICP perspective)
+; This is pseudocode to illustrate the concept, not actual Stratum code
+(define (cache-lookup addr level)
+  (let ((result (probe-cache level addr)))
+    (if (hit? result)
+        (extract-data result)
+        (let ((data (cache-lookup addr (next-level level))))
+          (cache-fill level addr data)  ; Write fetched data back to current level
+          data))))
+```
 
-### Just more references
+That's when I decided: **implement cache hierarchy as recursive types in C++.**
 
-- [What Every Programmer Should Know About Memory](https://people.freebsd.org/~lstewart/articles/cpumemory.pdf) by Ulrich Drepper, recommend to read 3.1 CPU Caches in the Big Picture.
+Instead of a traditional OOP design with virtual methods and polymorphism, use template metaprogramming to bind the hierarchy at compile time—just like hardware does at synthesis time.
 
-## Building from the Ground **DOWN**
+---
 
-> What are you talking about? From Grounds Down?
+**Further reading:**
 
-This is just a niche humor. There is a long-standing Canadian aviation ground school textbook called "From the Ground Up" first released in 1941. Obvious enough, from teaching how to fly from ground school.
+- [CS:APP Chapter 6](https://www.cs.sfu.ca/~ashriram/Courses/CS295/assets/books/CSAPP_2016.pdf) - Cache fundamentals
+- [SICP Chapter 1.2](https://web.mit.edu/6.001/6.037/sicp.pdf) - Recursive processes
+- [What Every Programmer Should Know About Memory](https://people.freebsd.org/~lstewart/articles/cpumemory.pdf) - Section 3.1
 
-FIXME: SVG Stratum
+---
 
-And so, in here, I mean from "Ground Down." If we look from compiler's perspective (or more specifically, compiler backend's perspective), the load instruction means go dig underground to find the data from the memory. From RISC-V's terminorlogy, `lw` for load word, `lb` for load byte... But how long does the data ready? Where can we find our data hidden under the abstraction ground. It depends on which stratum the data is at. So this project is named "Stratum" (FIXME: add github link).
+## Building Stratum: Digging Through Memory Layers
 
-So, the upper graphs, illustrates my thinking process.
+Here's how I think about cache hierarchy from a compiler backend perspective:
 
-1. The cpu only cares 2 things: Load or store to the memeroy hierarchy.
-2. Every cache has its own charastics (Sets, Ways, BlockSize, Policy)
-3. We can chain all stratums together as an abstraction of memroy hierarchy
-4. Every interction between different layer of cache can be view as "recusive process"
-5. We can assume that we can get the data from main memory (since this is a cache simulator)
+![Stratum Memory Hierarchy](/images/stratum-svg.svg)
 
-So, everything is deterministic in compile time.
+The name "Stratum" comes from this mental model: memory hierarchy as **geological layers**.
 
-And the building blocks are:
+**Above ground:** CPU and registers—visible, fast, directly accessible.
 
-- Test data (input)
-- Memory hierarchy setup
-  - Sets
-  - Ways
-  - BlockSize
-  - Policy
-  - latency
-  - next cache
-- Procedures
-  - Load
-  - Store
-  - Hit
-  - Miss
-- Report (output)
+**Below ground:** Cache stratums—hidden, progressively deeper and slower. When the compiler generates a load instruction (`lw` in RISC-V), it's essentially saying "dig down through the strata until you find this data."
 
-Looks very simple, sounds simple in Haskell using type alias. But I really struggle implementing this using C++20 recursive template. It is quite impressive from a language's perspective that such an impeative C++ can adapt to this functional way to declare any cache as a type, then chain them all together.
+- L1 cache miss? Dig deeper to L2.
+- L2 cache miss? Dig deeper to L3.
+- L3 cache miss? Excavate all the way down to DRAM.
+
+> From the grounds down.
+
+_(Apologies to Canadian aviation students Not up--we're compiler people, we dig)_
+
+From a compiler backend perspective, every load instruction digs _down_ through memory layers to find data. Which stratum is your data in? L1? L2? DRAM? The depth determines the latency.
+
+That's why this project is named "Stratum"—because cache hierarchy is literally about drilling through geological layers of memory.
+
+### Design Principles
+
+This geological metaphor shaped Stratum's architecture:
+
+**1. Discrete layers**: Each cache level is independent
+**2. Miss delegation**: On miss, ask the next layer down
+**3. Fixed topology**: Like rock strata, layers don't rearrange at runtime
+
+This maps to the recursive pattern from SICP Chapter 1.2: each level is a function that either returns data or recursively calls the next level.
 
 ```cpp
 using MemType = MainMemory<"MainMemory">;
@@ -310,45 +209,79 @@ using L1Type = Cache<"L1",  L2Type,  64,  8, 64, LRUPolicy,    4>;
 //                  Name NextLayer Sets Ways BlockSize Policy HitLatency
 ```
 
-This advantage of this design is:
-1. Significat faster than OOP design (no vtable overhead)
-2. Very simple configuation
+Each cache level is a **type** that statically binds to the next layer. The entire hierarchy resolves at compile time—just like how hardware interconnects are fixed when you synthesize a Verilog/VHDL design into gates.
 
-Disadvantage:
-1. Painful debugging experience implementing C++ template
-2. If you want to test another combination of cache configuation you need to re-compile
+**Why this design?**
 
-Disadvantage (1) might be worth for the faster execution time. But we need to solve disadvantage (2) to be useful for teams that need real data to choose the correct hierarchy policy. So I decided a weird way - writing my own Domain Specific Language (DSL) configuration file in LISP (racket) to generate tons of `main.cpp` and Makefile according to policy people config.
+Traditional OOP would use virtual methods and runtime dispatch. But cache topology is fixed at hardware synthesis—there's no runtime decision about "which next level to query."
 
-## Building a Domain Specific Language Configuation
+Think of it like **wiring in Verilog** (`wire` keyword), **signal connections in VHDL**, or **module connections in Chisel** (`:=` and `<>` operators): L1's miss port is hardwired to L2's input port. You don't change this at runtime; it's baked into the silicon.
 
-Since we don't want to manually change the configuation and recompile, why not we configure once, creating a lot of excutable?
+Template metaprogramming captures this constraint: compile-time binding eliminates virtual dispatch overhead, mirroring how HDL synthesis produces fixed interconnects.
 
-User can config the cache like the following.
+**Disadvantages:**
+
+1. **Template error messages are cryptic**
+   Template instantiation errors are... educational. You will become very familiar with `std::enable_if` and SFINAE, whether you want to or not.
+
+2. **Recompilation required for every configuration**
+   This is fine for one-off experiments but painful for systematic exploration. (Just like changing Verilog parameters requires resynthesis. This is why I added the Racket code generator.)
+
+**Advantages:**
+
+1. **Significantly faster than OOP design**
+   No vtable overhead, no runtime dispatch—like the difference between software function calls vs. hardwired logic gates.
+
+2. **Very simple configuration**
+   Just a few parameters to specify cache size, associativity, block size, etc.
+
+### Automating Configuration with Racket
+
+The C++ template approach was fast, but had a painful limitation:
+**Every configuration change requires full recompilation.**
+
+Want to compare 2-level vs 3-level cache? Recompile. \
+Want to test LRU vs FIFO? Recompile. \
+Want to sweep associativity from 4-way to 16-way? Recompile.
+
+For a single experiment, this is tolerable. For systematic exploration across dozens of configurations, it's a productivity killer.
+
+**Solution: Generate the C++ code programmatically.**
+
+Instead of manually editing templates, define configurations as S-expressions and generate all variants at one:
 
 ```racket
 ;; Compare 3-level vs 2-level hierarchy
-(case_001
-  (L1 64 8 4 LRUPolicy L2)
-  (L2 512 8 64 LRUPolicy L3)
-  (L3 8192 16 64 LRUPolicy MainMemory))
+(define experiments
+  (case_001
+  ;; name   sets  way latency policy      nextLevel
+    (L1     64    8    4      LRUPolicy   L2)
+    (L2     512   8    64     LRUPolicy   L3)
+    (L3     8192  16   64     LRUPolicy   MainMemory))
 
-(case_002
-  (L1 64 8 4 LRUPolicy L2)
-  (L2 512 8 64 LRUPolicy MainMemory))  ;; Skip L3
+  (case_002
+  ;; name   sets  way latency policy      nextLevel
+    (L1     64    8    4      LRUPolicy   L2)
+    (L2     512   8    64     LRUPolicy   MainMemory)))
 ```
+
+Run `racket config.rkt` to generate `case_001.cpp` and `case_002.cpp`.
+
+Compile once, run both experiments.
 
 Then build using cmake, we can have all different reports of executable ready to compare.
 
 ```bash
 racket scripts/config.rkt  # Regenerate C++ code
-cmake --build build
+cmake --build build        # Build executable
+
+# Run experiments
 ./build/bin/case_001 > results_3level.txt
 ./build/bin/case_002 > results_2level.txt
 diff results_3level.txt results_2level.txt
 ```
 
-Run result.
+Output:
 
 ```
 =========================================================
@@ -363,7 +296,106 @@ L3                       0        625                    0
 MainMemory             625          0                  232
 ```
 
-It sounds super fancy, but it's just converting configuration to create =case_xxx.cpp= then compiles to executable.
+**Why Racket for Code Generation?**
+
+**TL;DR: I didn't want to write a parser.**
+
+In Racket, the configuration file IS the program:
+
+```racket
+;; This is valid Racket code AND valid configuration data:
+(define experiments
+  '((case_001
+     (L1 64 8 4 LRUPolicy L2)
+     (L2 512 8 64 LRUPolicy L3))))
+```
+
+No JSON. No YAML. No `configparser`. Just `read` the file and you have nested lists ready to process.
+
+In Python, you'd need to pick a format (JSON? YAML? TOML?) and write parsing logic:
+
+```python
+import json
+with open("config.json") as f:
+    experiments = json.load(f)  # Now deal with dicts/lists
+    name = config["name"]  # String keys everywhere
+```
+
+**The cost:** ~100 lines of Racket code vs ~150-200 lines of Python (after adding `json.load`, error handling, and dict unpacking).
+
+**The benefit:** For someone who already knows Lisp, Racket is faster to write and harder to break (no missing commas in JSON, no YAML indentation errors).
+
+If you don't already know Racket, **use Python**. The productivity gain only exists if you're fluent in Lisp.
+
+---
+
+## Building Stratum: Answering the Questions I Couldn't
+
+After studying CS:APP and building [Stratum](https://github.com/TheCloudlet/Stratum), I can now properly answer those interview questions. More importantly, I understand _why_ my rb-tree optimization worked--and when it might not.
+
+### Question 1: What Causes Cache-Miss Latency?
+
+My original answer was wrong. I said "L2 is bigger so slower."
+
+**The main reason:** L2/L3 are physically larger—longer wires and interconnects stretch the access pipeline. Size and wire delay dominate once you leave L1.
+
+**But there's more to it.** Latency also comes from **tag comparison** and **way selection**.
+
+When you access L2, hardware must:
+
+1. Compare the address tag against _all ways_ in the set (parallel)
+2. Select the matching way using a multiplexer
+
+Higher associativity (more ways) = more parallel comparisons + bigger multiplexer = longer critical path.
+
+**Why L2 is slower than L1:**
+
+- L1: 4-8 ways (faster tag compare, shorter wires)
+- L2: 16+ ways (more comparisons, longer wires)
+- Physical distance dominates, but associativity adds overhead
+
+**Real hardware nuance:** Modern CPUs mitigate associativity costs with banking and pipelining. In practice, size/wire delay and staging dominate L2/L3 latency; associativity is an important but secondary knob.
+
+### Question 2: Same Size, Different Latency—Why?
+
+**The real answer:** Different associativity.
+
+Same capacity (`C = S * E * B`), different organizations:
+
+- Cache A: 512 sets × 1 way (direct-mapped)
+- Cache B: 64 sets × 8 ways (8-way associative)
+
+Cache B is slower because:
+
+- 8 parallel tag comparisons (vs 1 in Cache A)
+- 8-input multiplexer (vs direct wire in Cache A)
+
+**Trade-off:**
+
+- Direct-mapped: Fast but conflict misses
+- 8-way: Slower but fewer conflicts
+
+**Real hardware nuance:** Modern CPUs narrow this gap using parallel tag+data access, way prediction, and banking. But higher associativity still tends to add latency while reducing conflict misses.
+
+### Question 3: What If Associativity/Policy Changes?
+
+**The hard truth:** My rb-tree optimization might not work everywhere.
+
+On ARM big.LITTLE:
+
+- Little cores: Smaller L1, lower associativity
+  -> More conflict misses -> My path array advantage shrinks
+- Big cores: Larger L1, higher associativity
+  -> My optimization still wins
+
+**Real hardware complexity:** Cache-sensitive optimizations are microarchitecture-dependent. Beyond capacity and associativity, replacement policy, prefetchers, line size, VIPT/TLB behavior, and LLC organization can flip results.
+
+**What I learned from Stratum:**
+You can't just benchmark on one machine and claim victory. Cache-sensitive code needs profiling across architectures. That's why I added Valgrind trace support—capture real workload patterns, then test against different cache configurations in Stratum.
+
+**Best practice:** Always validate on multiple cores (ARM big.LITTLE, x86, RISC-V) with hardware counters and trace-driven simulation.
+
+---
 
 ## Honest Evaluation of Stratum
 
@@ -405,33 +437,70 @@ This template-based hierarchy pattern isn't limited to CPU caches. The same appr
 
 **The key insight**: Any hierarchical lookup with fixed topology at "compile time" (or deployment time) can use this zero-overhead template approach. The abstraction of "check current level, on miss delegate to next level" is universal.
 
-## Building Stratum: Answering the Questions I Couldn't
+---
 
-After studying CS:APP and building [Stratum](https://github.com/TheCloudlet/Stratum), I can now properly answer those interview questions. More importantly, I understand *why* my rb-tree optimization worked—and when it might not.
+## Try It Yourself
 
-### Question 1: What Causes Cache-Miss Latency?
+**Quick Start (5 minutes):**
 
-### Question 2: Same Size, Different Latency—Why?
+```bash
+git clone https://github.com/TheCloudlet/Stratum.git
+cd Stratum
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/bin/stratum  # Run default experiments
+```
 
-### Question 3: What If Associativity/Policy Changes?
+**Dependencies:** C++20 compiler (GCC 10+/Clang 11+/MSVC 2019+), CMake 3.20+
 
-## Conclusion: What I Learned (and What's Missing)
+**Want to test your own traces?**
+
+Visit [Stratum README](https://github.com/TheCloudlet/Stratum) for instructions on:
+
+- Generating Valgrind memory traces from your programs
+- Creating custom cache configurations
+- Using the Racket code generator (optional)
+
+**License:** MIT - Fork it, modify it, break it, learn from it.
+
+---
+
+## Conclusion: From Interview Failure to First Principles
+
+That interview question—"What causes cache-miss latency?"—exposed a gap between **optimizing for cache behavior** and **understanding how caches actually work**. I could write cache-friendly code by intuition, but I couldn't explain why it worked or predict when it wouldn't.
+
+Building Stratum closed that gap.
 
 **What this project taught me:**
-- Cache behavior is about **access patterns**, not just capacity
-  - My rb-tree optimization worked because of sequential path array access
-  - Conflict misses matter more than you'd think (associativity isn't just a spec number)
-- Template metaprogramming can eliminate runtime overhead
-  - Zero-cost abstraction: cache hierarchy as types, not virtual dispatch
-  - Compile-time binding mirrors hardware reality (topology is fixed at synthesis)
-- Building tools teaches concepts better than reading alone
-  - Implementing LRU forced me to understand why timestamp arrays beat linked lists
-  - Writing the simulator exposed gaps my "reading comprehension" missed
+
+1. **Cache behavior is about access patterns, not just capacity**
+   - My rb-tree optimization worked because the path array had **sequential access** (L1-friendly)
+   - The old parent-pointer approach had **random heap access** (L1-hostile)
+   - Conflict misses matter more than capacity misses (associativity isn't just a spec number)
+
+2. **Template metaprogramming can mirror hardware constraints**
+   - Zero-cost abstraction: cache hierarchy as types, not virtual dispatch
+   - Compile-time binding mirrors hardware reality (topology is fixed at synthesis)
+   - Design constraints become compiler guarantees
+
+3. **Building tools teaches concepts better than reading alone**
+   - Implementing LRU forced me to understand why timestamp arrays beat linked lists
+   - Exposed why associativity directly impacts latency
+   - Debugging Valgrind traces revealed access patterns I'd never noticed in profilers
 
 **What I still don't understand:**
-- How replacement policies map to hardware counters (e.g., tree-PLRU in Intel)
-- Why real L1 caches use physical vs virtual indexing
-- How MESI/MOESI states work in multi-core scenarios
 
-**Future Work:**
+- How replacement policies map to hardware counters (e.g., tree-PLRU in Intel)
+- Why real L1 caches use physical vs virtual indexing (TLB interactions)
+- How MESI/MOESI states work in multi-core scenarios (cache coherence protocols)
+
+**Next steps:**
 Reading "A Primer on Memory Consistency and Cache Coherence" and implementing a MOESI simulator to close these gaps.
+
+---
+
+**Connect with me:**
+
+- GitHub: [TheCloudlet/Stratum](https://github.com/TheCloudlet/Stratum)
+- Questions/feedback: Open an issue or PR
+- Interested in collaborating? Let's talk.
