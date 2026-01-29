@@ -3,7 +3,6 @@ title = "Stratum: Architecting a Configurable Cache Simulator with C++ and Racke
 description = "Using Lisp to manage complexity in high-performance memory modeling."
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-01-29
-draft = true
 
 [taxonomies]
 tags = ["c", "cpp", "template", "cache", "simulation", "dsl"]
