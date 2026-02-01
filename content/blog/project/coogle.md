@@ -9,8 +9,6 @@ tags = ["c", "cpp", "strings", "google", "parser"]
 categories = ["cpp", "project"]
 +++
 
-# Introducing Coogle: Bringing Haskell's Hoogle to C++
-
 ## Why I Started This Project?
 
 The story started in 2024, when I decided to review basic algorithms and data structures. I started a repository called "[From Zero to Leetcode Hero](https://github.com/TheCloudlet/LeetcodeHero)." My intention was to learn and solve LeetCode problems using C++ and Haskell together.
@@ -102,7 +100,6 @@ Fair point! However, here's the thing: writing a Python script to manage complex
 Even with a script wrapping text-matching logic, you'll still run into two fundamental C++ features that trip up regex—but Coogle handles them naturally:
 
 1. **Type Aliases (The Semantic Gap)** — Regex sees text; Coogle sees types.
-
    - Code: `using NodeID = uint64_t;`
    - Search: You want a function returning `uint64_t`.
    - Regex/Python: Will miss `NodeID get_id()` because `"NodeID" != "uint64_t"`.

@@ -9,8 +9,6 @@ tags = ["c", "cpp", "strings", "memory-management", "pmr", "allocators", "vfs"]
 categories = ["cpp"]
 +++
 
-# Back to Basics: From C char to string_view (Notes from building Coogle)
-
 ## Background
 
 When I was implementing [Coogle](https://github.com/TheCloudlet/Coogle), I discovered something bizarre about C++ strings. That is why I wrote this note to summarize what I learned about C++ strings.
@@ -202,11 +200,9 @@ Knowing this aliasing can be enough to solve my issue, but maybe understanding e
 **Deconstructing the monster**
 
 - **CharT**:
-
   - Defines what kind of character the string holds—`char` for ASCII/UTF-8, `wchar_t` for wide characters, `char16_t` for UTF-16, etc. Simple enough.
 
 - **Traits**:
-
   - Hmm... is more interesting. Accoding to [cppreference:char_traits](https://en.cppreference.com/w/cpp/string/char_traits):
 
     > The char_traits class is a traits class template that abstracts basic character and string operations for a given character type. The defined operation set is such that generic algorithms almost always can be implemented in terms of it.
@@ -216,7 +212,6 @@ Knowing this aliasing can be enough to solve my issue, but maybe understanding e
     Cool!
 
 - **Allocator**:
-
   - This is a powerful tool controls memory management. The default uses `new`/`delete`, but you can plug in custom allocators for specific memory strategies—arena allocation, pool allocation, debugging allocators that track leaks, etc. This is what C++17's PMR (Polymorphic Memory Resources) builds on, which we'll cover in PART 3.
 
 > `std::basic_string` provides a flexible, reusable string class that can adapt to different character types, behaviors, and memory strategies.
