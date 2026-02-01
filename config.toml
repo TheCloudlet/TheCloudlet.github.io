@@ -1,11 +1,9 @@
 base_url = "https://thecloudlet.github.io"
 title = "The Cloudlet"
 description = "Notes on compilers, systems programming, and functional programming"
-theme = "tabi"
+theme = "abridge"
 compile_sass = true
 build_search_index = true
-generate_feeds = true
-feed_filenames = ["atom.xml"]
 
 taxonomies = [
     {name = "tags", feed = true},
@@ -14,7 +12,8 @@ taxonomies = [
 
 [markdown]
 highlight_code = true
-highlight_theme = "css"
+highlight_theme = "css" # Abridge uses CSS classes - overriding vars in extra.scss
+
 extra_syntaxes_and_themes = []
 render_emoji = false
 external_links_target_blank = true
@@ -22,77 +21,47 @@ external_links_no_follow = false
 external_links_no_referrer = false
 smart_punctuation = false
 
-[link_checker]
-skip_prefixes = []
-skip_anchor_prefixes = []
-
 [search]
+index_format = "elasticlunr_json"
 include_title = true
 include_description = true
 include_content = true
 
-[slugify]
-paths = "on"
-taxonomies = "on"
-anchors = "on"
-
 [extra]
-# Custom CSS for readability
-stylesheets = ["custom.css"]
-
-# Favicon
-favicon_emoji = "💠"
-
-# Allow Google Analytics through CSP
-allowed_domains = [
-    { directive = "script-src", domains = ["*.googletagmanager.com", "*.google-analytics.com", "giscus.app"] },
-    { directive = "connect-src", domains = ["*.googletagmanager.com", "*.google-analytics.com", "*.analytics.google.com", "analytics.google.com"] },
-    { directive = "font-src", domains = ["'self'", "data:", "fonts.gstatic.com", "cdn.jsdelivr.net"] },
-    { directive = "img-src", domains = ["'self'", "data:", "https://*"] },
-    { directive = "frame-src", domains = ["giscus.app"] },
-    { directive = "style-src", domains = ["'self'", "giscus.app", "'unsafe-inline'", "fonts.googleapis.com"] },
-]
-
+stylesheets = ["abridge.css"]
 author = "Yi-Ping Pan (Cloudlet)"
 keywords = ["compiler", "llvm", "mlir", "c++", "haskell", "optimization"]
-show_reading_time = false
+favicon_svg = "favicon.svg"
+ogimage = "favicon.svg"
 toc = true
-show_related_posts = true
-show_author = false
-
-# Google Analytics ID
-google_analytics_id = "G-7FD091QMK9"
-
-# Social links in footer
-socials = [
-    { name = "GitHub", url = "https://github.com/TheCloudlet", icon = "github" },
-    { name = "LinkedIn", url = "https://linkedin.com/in/yipingpan", icon = "linkedin" },
-]
-
-# Footer menu
-footer_menu = [
-    { url = "about", name = "about", trailing_slash = true },
-]
 
 menu = [
-    { name = "blog", url = "blog", trailing_slash = true },
-    { name = "tags", url = "tags", trailing_slash = true },
-    { name = "about", url = "about", trailing_slash = true },
+    { name = "blog", url = "blog", slash = true },
+    { name = "tags", url = "tags", slash = true },
+    { name = "about", url = "about", slash = true },
 ]
 
-# Giscus comments
-[extra.giscus]
-enabled_for_all_posts = true
-automatic_loading = true
-repo = "TheCloudlet/TheCloudlet.github.io"
-repo_id = "R_kgDOQXba0g"
-category = "Announcements"
-category_id = "DIC_kwDOQXba0s4CyEEv"
-mapping = "pathname"
-strict_title_matching = 0
-enable_reactions = 1
-comment_box_above_comments = false
-light_theme = "light"
-dark_theme = "dark"
-lang = "en"
-lazy_loading = true
+menu_footer = [
+    { url = "about", name = "about", slash = true },
+]
+
+github = "TheCloudlet"
+linkedin = "yipingpan"
+
+# I have commented out your giscus settings as Abridge does not support it out of the box.
+# You may need to add custom templates to support it.
+# [extra.giscus]
+# enabled_for_all_posts = true
+# automatic_loading = true
+# repo = "TheCloudlet/TheCloudlet.github.io"
+# repo_id = "R_kgDOQXba0g"
+# category = "Announcements"
+# category_id = "DIC_kwDOQXba0s4CyEEv"
+# mapping = "pathname"
+# strict_title_matching = 0
+# enable_reactions = 1
+# comment_box_above_comments = false
+# light_theme = "light"
+# dark_theme = "dark"
+# lang = "en"
+# lazy_loading = true
