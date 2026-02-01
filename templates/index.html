@@ -1,25 +1,37 @@
-{% extends "base.html" %}
-{% import "macros/compact_list_posts.html" as compact_macros %}
-{% import "macros/translate.html" as macros_translate %}
+{% extends "base.html" %} {% block content %} {# Main content area - using
+standard Abridge layout #}
+<div>
+  <article>{{ section.content | safe }}</article>
 
-{% block main_content %}
-<main class="index-main">
-    <article>
-        <div class="index-content">
-            {{ section.content | safe }}
-        </div>
+  <hr />
+  <h3>Latest Posts</h3>
 
-        {% if section.extra.section_path %}
-            {% set blog_section = get_section(path=section.extra.section_path) %}
-            {% set max_posts = section.extra.max_posts | default(value=10) %}
+  {% set blog = get_section(path="blog/_index.md") %} {% for page in blog.pages
+  | slice(end=5) %}
+  <article>
+    {{- macros::title_index(page=page, config=config) }} {%- if
+    config.extra.meta_index.position %} {%- if config.extra.meta_index.position
+    == "top" or config.extra.meta_index.position == "both" %} {{-
+    macros::meta_index(page=page, config=config) }} {%- endif %}{%- endif %}
+    <div class="sum">
+      <p>
+        {%- if page.summary %} {{ page.summary | markdown(inline=true) | safe }}
+        {%- elif page.description %} {{ page.description | markdown(inline=true)
+        | safe }} {%- elif page.content %} {{ page.content | striptags |
+        truncate(length=150) | markdown(inline=true) | safe }} {%- endif %}
+        <a href="{{ page.permalink | safe }}">
+          ...{{ macros::translate(key="more", default="more", i18n=i18n) }}
+        </a>
+      </p>
+    </div>
+  </article>
+  {% if not loop.last %}
+  <hr style="margin: 1rem 0; border: 0; border-top: 1px dashed var(--c3)" />
+  {% endif %} {% endfor %}
 
-            <h2>Recent Posts</h2>
-            {{ compact_macros::compact_list_posts(posts=blog_section.pages, max=max_posts) }}
+  <div style="margin-top: 2rem; text-align: center">
+    <a class="b s120" href="{{ get_url(path='blog') }}">View All Posts →</a>
+  </div>
+</div>
 
-            <div style="margin-top: 2rem;">
-                <a href="{{ get_url(path='blog') }}">All posts →</a>
-            </div>
-        {% endif %}
-    </article>
-</main>
-{% endblock main_content %}
+{% endblock content %}
