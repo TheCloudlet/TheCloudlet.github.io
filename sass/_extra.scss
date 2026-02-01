@@ -1,0 +1,236 @@
+/******************************************************************************
+ *   Extra - Put your extra SASS/CSS here, it will get bundled with abridge.css
+ *****************************************************************************/
+
+@use "plex.scss";
+
+// =============================================================================
+// 1. CSS Variables & Theme Overrides (Ported from Tabi customization)
+// =============================================================================
+
+:root {
+  // -- Fonts --
+  --code-font: "Fira Code", monospace;
+
+  // -- GitHub Dark Syntax Highlighting --
+  // We use !important or high specificity to override Abridge's mode-based settings
+  --rosewater: #ffa657;
+  --flamingo: #ff7b72;
+  --pink: #ff7b72;
+  --mauve: #d2a8ff;
+  --red: #ff7b72;
+  --maroon: #ff7b72;
+  --peach: #ffa657;
+  --yellow: #e3b341;
+  --green: #7ee787;
+  --teal: #a5d6ff;
+  --sky: #79c0ff;
+  --blue: #79c0ff;
+  --lavender: #d2a8ff;
+  --text: #c9d1d9;
+  --overlay0: #8b949e;
+  --codeblock-bg: #0d1117;
+  --codeblock-highlight: #161b22;
+}
+
+// Override Abridge Syntax Handling with higher specificity
+:root,
+:root:not(.switch),
+:root.switch {
+  --h0: #0d1117 !important; // background
+  --h1: #c9d1d9 !important; // base text
+  --h2: #8b949e !important; // comments
+  --h3: #ff7b72 !important; // red (keyword/function)
+  --h4: #ffa657 !important; // orange (const/var)
+  --h5: #d2a8ff !important; // purple (entity/function)
+  --h6: #7ee787 !important; // green (string)
+  --h7: #a5d6ff !important; // teal (escape)
+  --h8: #79c0ff !important; // blue (tag/prop)
+  --h9: #d2a8ff !important; // lavender (operator)
+  --ha: #161b22 !important; // highlight line
+}
+
+// Override Abridge Syntax Highlighting Colors to match GitHub Dark
+// Note: These variable names ($h0, $h1, etc.) must be overridden in abridge.scss BEFORE import
+// or we can try to override the CSS variables if Abridge uses them.
+// Abridge uses SCSS variables for generation.
+
+// Since `abridge.scss` imports this file at the END, we can only override CSS rules here,
+// not SCSS variables used in the main generation.
+// However, we can basic CSS overrides.
+
+pre {
+  background-color: var(--codeblock-bg) !important;
+  color: var(--text) !important;
+  font-size: 1.25em !important; // Increased to match visual weight of surrounding text
+}
+
+// Inline code styling
+:not(pre) > code {
+  background-color: var(--codeblock-highlight) !important; // using our variable
+  color: var(--rosewater) !important; // High contrast text for inline code
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.95em; // Adjusted to align visually with body text
+}
+
+// =============================================================================
+// 3. Typography
+// =============================================================================
+
+// Use IBM Plex Sans for article body text
+article {
+  p,
+  li,
+  details,
+  summary {
+    font-family: "IBM Plex Sans", sans-serif;
+  }
+}
+
+// Make headers more distinct - use serif font, larger sizes, and color
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Source Serif", "Georgia", serif;
+}
+
+article {
+  h1 {
+    font-size: 1.8rem; // Reduced from 2rem
+    font-weight: 700;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+  }
+
+  h2 {
+    font-size: 1.5rem; // Reduced from 1.6rem
+    font-weight: 650;
+    margin-top: 1.4em;
+    margin-bottom: 0.4em;
+  }
+
+  h3 {
+    font-size: 1.25rem; // Reduced from 1.35rem
+    font-weight: 600;
+    margin-top: 1.2em;
+    margin-bottom: 0.3em;
+  }
+
+  h4 {
+    font-size: 1.15rem; // Reduced from 1.25rem
+    font-weight: 600;
+    margin-top: 1em;
+    margin-bottom: 0.2em;
+  }
+
+  // Normalize paragraph spacing to fix "Leading & Chunking" issues
+  p {
+    margin-top: 0;
+    margin-bottom: 1.25rem; // Consistent spacing
+    line-height: 1.7; // Slightly looser line height for readability
+  }
+
+  // Fix "Latest Post" titles on homepage being too huge
+  big {
+    font-size: 1.4rem !important;
+    font-weight: 700;
+    line-height: 1.3;
+    display: block; // Ensure it behaves like a header
+    margin-bottom: 0.5rem;
+
+    a {
+      text-decoration: none;
+    }
+  }
+}
+
+// =============================================================================
+// 4. Layout & TOC Refinements
+// =============================================================================
+
+// Increase Global Max Width for Main Content
+header,
+main,
+footer {
+  max-width: 90% !important; // Increased from 70% to give more room
+}
+
+// Sidebar (TOC) Adjustments - Force Visibility
+.sblock {
+  display: block !important;
+  width: 15rem !important;
+  min-width: 15rem !important;
+  margin-left: 2rem !important;
+
+  @media screen and (max-width: 1100px) {
+    display: none !important; // Hide on small screens to prevent breaking
+  }
+}
+
+// Typography: Title Spacing
+h1 {
+  margin-bottom: 2.5rem !important;
+}
+
+// Inline Code: Refined Aesthetic
+:not(pre) > code {
+  background-color: #f3f4f6 !important; // Light Soft Gray (User Requested)
+  color: #c0392b !important; // Deep Red (User Requested)
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  font-size: 0.9em;
+  font-family: var(--code-font);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+// Code Blocks (Pre) Refinements
+pre {
+  background-color: var(--codeblock-bg) !important;
+  color: var(--text) !important;
+  font-family: "Fira Code", "Roboto Mono", "Consolas", monospace !important;
+  font-size: 0.95rem !important; // ~15px, readable
+  line-height: 1.5 !important;
+  padding: 2.5rem 1rem 1rem 1rem !important; // EXTRA TOP PADDING to clear header
+  border-radius: 6px;
+  overflow-x: auto;
+  position: relative; // Context for absolute header
+
+  // inner code block inheritance
+  code {
+    font-family: inherit;
+    font-size: inherit;
+    background-color: transparent !important;
+    color: inherit !important;
+    padding: 0;
+    border: none;
+  }
+}
+
+// Language Label Styles - Absolute Position Header
+// This prevents it from scrolling with code and overlapping
+pre[data-lang]::before {
+  content: attr(data-lang);
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0; // Full width header bar
+  background-color: #21262d; // Slightly lighter header bg
+  color: #8b949e !important; // Distinct Gray Text (#555 on dark might be hard to see, defaulting to reliable gray unless forced)
+  // User asked for #555555 deep gray. On #21262d data-header background...
+  // Let's use #999 for better visibility on dark, or stick to user request if they insist on light mode style
+  // Provided user wants dark mode:
+  color: #c9d1d9 !important;
+  font-weight: bold;
+  padding: 0.25rem 1rem;
+  font-size: 0.85rem;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  border-bottom: 1px solid rgba(240, 246, 252, 0.1);
+  text-transform: uppercase;
+  z-index: 10;
+}
