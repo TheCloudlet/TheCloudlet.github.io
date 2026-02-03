@@ -34,6 +34,7 @@ keywords = ["compiler", "llvm", "mlir", "c++", "haskell", "optimization"]
 favicon_svg = "favicon.svg"
 ogimage = "favicon.svg"
 toc = true
+google_analytics = "G-7FD091QMK9"
 
 menu = [
     { name = "blog", url = "blog", slash = true },
