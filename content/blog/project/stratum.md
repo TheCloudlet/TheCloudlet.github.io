@@ -5,7 +5,7 @@ author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-01-29
 
 [taxonomies]
-tags = ["c", "cpp", "template", "cache", "simulation", "dsl"]
+tags = ["c", "cpp", "template", "cache-simulation", "dsl", "sicp"]
 categories = ["cpp", "project"]
 +++
 
