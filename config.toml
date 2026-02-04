@@ -66,3 +66,16 @@ linkedin = "yipingpan"
 # dark_theme = "dark"
 # lang = "en"
 # lazy_loading = true
+
+# Meta information display for blog posts
+[extra.meta_post]
+position = "top"  # Options: "top", "bottom", "both"
+date = true
+updated = false
+author = false
+categories = false
+tags = true
+
+[extra.meta_index]
+position = "bottom"  # Options: "top", "bottom", "both"
+date = true
