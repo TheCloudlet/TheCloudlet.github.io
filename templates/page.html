@@ -78,7 +78,43 @@ config.extra.comments.remark42 %}
       {%- endif %} {%- endfor %}
     </div>
   </div>
-  {%- endif %} {%- endif %} {{ page.content | safe }} {%- if
+  {%- endif %} {%- endif %} {{ page.content | safe }}
+
+  {#-
+    Related Posts: rank by tag overlap.
+    Strategy: add each candidate once per shared tag into a list, then
+    deduplicate by picking the first occurrence of each permalink.
+    A post sharing 3 tags appears 3× in candidates → picked first → top ranked.
+  -#}
+  {%- if page.taxonomies.tags %}
+    {%- set_global candidates = [] %}
+    {%- for rtag in page.taxonomies.tags %}
+      {%- set rtag_data = get_taxonomy_term(kind="tags", term=rtag, lang=lang) %}
+      {%- for p in rtag_data.pages %}
+        {%- if p.permalink != page.permalink %}
+          {%- set_global candidates = candidates | concat(with=p) %}
+        {%- endif %}
+      {%- endfor %}
+    {%- endfor %}
+    {#- unique(attribute="permalink") keeps first occurrence = highest-overlap post -#}
+    {%- set related = candidates | unique(attribute="permalink") | slice(end=3) %}
+{%- if related %}
+  <hr />
+  <section class="related-posts">
+    <p class="related-label">Related Articles</p>
+    <ul>
+      {%- for p in related %}
+      <li>
+        <a href="{{ p.permalink | safe }}">{{ p.title }}</a>
+        {%- if p.description %}<span class="related-desc"> — {{ p.description }}</span>{%- endif %}
+      </li>
+      {%- endfor %}
+    </ul>
+  </section>
+    {%- endif %}
+  {%- endif %}
+
+  {%- if
   config.extra.meta_post.position %} {%- if config.extra.meta_post.position ==
   "bottom" or config.extra.meta_post.position == "both" %} {{-
   macros::meta_post(page=page, config=config) }} {%- endif %}{%- endif %} {%-

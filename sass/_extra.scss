@@ -278,3 +278,38 @@ pre[data-lang]::before {
     padding: 0.1rem 0.5rem;
   }
 }
+
+// =============================================================================
+// Related Posts
+// =============================================================================
+.related-posts {
+  margin-top: 1.5rem;
+
+  .related-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  li {
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--bg2, #333);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .related-desc {
+    font-size: 0.85rem;
+    opacity: 0.6;
+  }
+}
