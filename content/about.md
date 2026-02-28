@@ -1,10 +1,11 @@
 +++
 title = "About: Yi-Ping Pan (Cloudlet)"
 template = "page.html"
-date = 2024-01-01
+date = 2026-01-01
 [extra]
 hide_from_list = true
 toc = false
+hide_meta = true
 +++
 
 Yi-Ping Pan is a software engineer with a deep interest in compilers, systems programming, and functional programming. He has worked on projects spanning compiler infrastructure (LLVM, MLIR), low-level systems in C++, and exploring the elegance of Haskell and functional paradigms.
