@@ -116,9 +116,10 @@ config.extra.comments.remark42 %}
     {%- if related %}
   <p class="post-meta-line">&gt; related articles:<br />
     {%- for p in related %}
-    {{ loop.index }}) <a href="{{ p.permalink | safe }}">{{ p.title }}</a><br />
+    &nbsp;&nbsp;{{ loop.index }}) <a href="{{ p.permalink | safe }}">{{ p.title }}</a><br />
     {%- endfor %}
   </p>
+  <hr />
     {%- endif %}
   {%- endif %}
 

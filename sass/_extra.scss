@@ -284,18 +284,11 @@ pre[data-lang]::before {
 // =============================================================================
 .post-meta-line {
   font-size: 0.85rem;
-  opacity: 0.6;
   margin: 0.4rem 0;
-
-  &:hover {
-    opacity: 1;
-  }
+  opacity: 0.8;
 
   a {
+    color: var(--a1);
     text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
   }
 }
