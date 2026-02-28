@@ -1,5 +1,5 @@
 +++
-title = "About"
+title = "About: Yi-Ping Pan (Cloudlet)"
 template = "page.html"
 date = 2024-01-01
 [extra]
@@ -7,24 +7,10 @@ hide_from_list = true
 toc = false
 +++
 
-# Hi, I'm Yi-Ping Pan
+Yi-Ping Pan is a software engineer with a deep interest in compilers, systems programming, and functional programming. He has worked on projects spanning compiler infrastructure (LLVM, MLIR), low-level systems in C++, and exploring the elegance of Haskell and functional paradigms.
 
-I'm a software engineer passionate about compilers, systems programming, and functional programming.
+He has contributed to open-source tooling and enjoys thinking about the intersection of language design and runtime performance — from how programs are parsed and optimized, to how they execute on real hardware.
 
-## What I Work On
+Outside of engineering, he writes, tinkers with Emacs configurations, and occasionally gets lost in a good book.
 
-- Compiler development (LLVM, MLIR)
-- Systems programming in C++
-- Functional programming with Haskell
-
-## Get In Touch
-
-- [GitHub](https://github.com/TheCloudlet)
-- [LinkedIn](https://linkedin.com/in/yipingpan)
-
-<!-- Feel free to expand this page with:
-- Your background/experience
-- Current projects
-- What you're looking for (if job hunting)
-- Technical interests in more detail
--->
+He can be reached at [yipingp@outlook.com](mailto:yipingp@outlook.com), or found on [GitHub](https://github.com/TheCloudlet) and [LinkedIn](https://linkedin.com/in/yipingpan).

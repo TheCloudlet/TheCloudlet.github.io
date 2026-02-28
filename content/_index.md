@@ -9,7 +9,7 @@ show_reading_time = false
 show_author = false
 +++
 
-I'm a compiler engineer at Synopsys working on VHDL compilers.
+I'm a compiler engineer working on VHDL compilers.
 
 I write about C++, compilers, and programming languages — mostly to figure things out for myself. If it helps you too, that's a bonus.
 
