@@ -4,6 +4,8 @@ description = "Notes on compilers, systems programming, and functional programmi
 theme = "abridge"
 compile_sass = true
 build_search_index = true
+generate_feeds = true
+feed_filenames = ["atom.xml"]
 
 taxonomies = [
     {name = "tags", feed = true},
@@ -44,6 +46,7 @@ menu = [
 
 menu_footer = [
     { url = "about", name = "about", slash = true },
+    { url = "atom.xml", name = "RSS feed", slash = false },
 ]
 
 copyright_override = "&copy; 2025-$CURRENT_YEAR $SITE_TITLE"
