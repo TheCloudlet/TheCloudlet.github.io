@@ -280,36 +280,22 @@ pre[data-lang]::before {
 }
 
 // =============================================================================
-// Related Posts
+// Share & Related (unified inline prompt style)
 // =============================================================================
-.related-posts {
-  margin-top: 1.5rem;
+.post-meta-line {
+  font-size: 0.85rem;
+  opacity: 0.6;
+  margin: 0.4rem 0;
 
-  .related-label {
-    font-size: 0.75rem;
-    margin-bottom: 0.5rem;
-    opacity: 0.5;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+  &:hover {
+    opacity: 1;
   }
 
-  ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
+  a {
+    text-decoration: none;
 
-  li {
-    padding: 0.3rem 0;
-    border-bottom: 1px solid var(--bg2, #333);
-
-    &:last-child {
-      border-bottom: none;
+    &:hover {
+      text-decoration: underline;
     }
-  }
-
-  .related-desc {
-    font-size: 0.85rem;
-    opacity: 0.6;
   }
 }
