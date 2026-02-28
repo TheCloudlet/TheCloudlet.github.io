@@ -38,8 +38,9 @@ description=description, is_home=true) }} {%- endblock seo %} {%- block content
     </div>
     {%- if config.extra.meta_index.position %} {%- if
     config.extra.meta_index.position == "bottom" or
-    config.extra.meta_index.position == "both" %} {{-
-    macros::meta_index(page=page, config=config) }} {%- endif %} {%- endif %}
+    config.extra.meta_index.position == "both" %}
+        <span> {{ page.date | date(format="%B %d, %Y") }}</span>
+    {%- endif %} {%- endif %}
   </article>
   {%- endfor %} {%- if paginator %} {%- if config.extra.arrow_pagination %} {{-
   macros::pagination(paginator=paginator, config=config) }} {%- else %} {{-
