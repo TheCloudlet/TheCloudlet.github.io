@@ -46,6 +46,9 @@ menu_footer = [
     { url = "about", name = "about", slash = true },
 ]
 
+copyright_override = "&copy; 2025-$CURRENT_YEAR $SITE_TITLE"
+footer_credit = false
+
 github = "TheCloudlet"
 linkedin = "yipingpan"
 
