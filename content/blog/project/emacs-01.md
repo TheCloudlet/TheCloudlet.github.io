@@ -94,18 +94,22 @@ For modern editors like VSCode, an interpreter is still inside. VSCode is essent
 
 This is also why my cache simulator [Stratum](https://github.com/TheCloudlet/Stratum) uses Racket to create a DSL for cache configuration.
 
-## Next step: How to build a tiny Emacs Lisp interpreter in C with only seven elements
+## Next step:
 
-1) quote
-2) atom
-3) eq
-4) car
-5) cdr
-6) cons
-7) cond
+A. How to build a tiny Emacs Lisp interpreter in C with only seven elements
+   1) quote
+   2) atom
+   3) eq
+   4) car
+   5) cdr
+   6) cons
+   7) cond
+
+B. How `Lisp_Object` works?
 
 ---
 
 Emacs Internal Series:
 
-- #01: Emacs is a Lisp Runtime in C, Not an Editor
+- #01: Emacs is a Lisp Runtime in C, Not an Editor <-- We are here
+- #02: [Data First — Deconstructing Lisp_Object in C](@/blog/project/emacs-02.md)
