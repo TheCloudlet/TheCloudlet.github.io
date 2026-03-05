@@ -247,7 +247,7 @@ Stay tuned for: _"Inside libclang: From Visitor Pattern to AST Mastery"_
 At the beginning, I thought `std::string` was a real type. (Yes, this is how naive I was—despite working with professional C++ programmers and being tortured by `std::string` issues regularly, I didn't know this fundamental fact). So when I expected to find `std::string` but actually got `std::basic_string<...>`, I was very confused.
 
 I documented my learning journey in detail here:
-[Back to Basics: From C char to string_view (Notes from building Coogle)](https://thecloudlet.github.io/blog/cpp/cpp-string/)
+[Back to Basics: From C char to string_view (Notes from building Coogle)](@/blog/project/coogle.md)
 
 **The fix: Canonicalization (The Search for Truth)**
 
