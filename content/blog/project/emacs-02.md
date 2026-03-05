@@ -73,7 +73,7 @@ Back to the GNU Emacs [source code](https://github.com/emacs-mirror/emacs), the 
 
 For simplicity, using a 64-bit system to explain.
 
-Lisp_Object is a machine word (8 bytes) where the lower 3 bits serve as a type tag, and the upper 61 bits hold the actual value or pointer.
+Lisp_Object is a 64-bit machine word. For pointers, because heap allocations are 8-byte aligned, their lowest 3 bits are guaranteed to be `000`. Emacs simply embeds the 3-bit type tag directly into these "free" zero bits. For immediate integers (fixnums), the upper 62 bits hold the actual value.
 
 ```
 64-bit Lisp_Object:
@@ -212,15 +212,15 @@ With the data representation in place, we can now map McCarthy's original 7 axio
 
 If McCarthy's 7 axioms are the soul of Lisp, the Emacs source is its physical body — but that body is not confined to a single file. The axioms split across three files depending on whether they are about *data representation*, *memory*, or *control flow*:
 
-| Axiom   | Meaning                   | C struct / function                                             | File      |
-|---------|---------------------------|-----------------------------------------------------------------|-----------|
-| `atom`  | is it NOT a pair?         | `EMACS_INT` / `struct Lisp_String` / `struct Lisp_Symbol` / ... | `lisp.h`  |
-| `eq`    | are two refs identical?   | `Lisp_Object` (raw 64-bit word compare)                         | `lisp.h`  |
-| `car`   | first element of pair     | `struct Lisp_Cons` - `.car` field                               | `lisp.h`  |
-| `cdr`   | rest of pair              | `struct Lisp_Cons` - `.cdr` field                               | `lisp.h`  |
-| `cons`  | construct a new pair      | `struct Lisp_Cons` allocated by `Fcons()`                       | `alloc.c` |
-| `quote` | return without evaluating | `Fquote()` — special form                                       | `eval.c`  |
-| `cond`  | branch on predicate       | `Fcond()` — special form                                        | `eval.c`  |
+| Axiom   | Meaning                   | C struct / function                                           | File      |
+|---------|---------------------------|---------------------------------------------------------------|-----------|
+| `atom`  | is it NOT a pair?         | `!CONSP(obj)` (e.g., `EMACS_INT`, `struct Lisp_String`, etc.) | `lisp.h`  |
+| `eq`    | are two refs identical?   | `Lisp_Object` (raw 64-bit word compare)                       | `lisp.h`  |
+| `car`   | first element of pair     | `struct Lisp_Cons` - `.car` field                             | `lisp.h`  |
+| `cdr`   | rest of pair              | `struct Lisp_Cons` - `.cdr` field                             | `lisp.h`  |
+| `cons`  | construct a new pair      | `struct Lisp_Cons` allocated by `Fcons()`                     | `alloc.c` |
+| `quote` | return without evaluating | `Fquote()` — special form                                     | `eval.c`  |
+| `cond`  | branch on predicate       | `Fcond()` — special form                                      | `eval.c`  |
 
 Notice the split: the first four axioms — `atom`, `eq`, `car`, `cdr` — are pure *data* operations, living entirely in `lisp.h`. `cons` crosses into memory management. Only `quote` and `cond` require the *evaluator* — they are the boundary where data becomes behavior.
 
