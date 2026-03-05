@@ -7,6 +7,10 @@ date = 2026-03-05
 [taxonomies]
 tags = ["c", "system-design", "history", "lisp", "compiler"]
 categories = ["c", "project", "compiler", "emacs"]
+
+[extra]
+math = true
+math_auto_render = true
 +++
 
 In the first part of this GNU Emacs series, I focused on the history and explains why there is a Lisp interpreter embedded inside a text editor. Before diving into this part, I recommend reading the previous post:
@@ -27,20 +31,28 @@ Before diving into the source code, I left a short reference on Lisp here. Feel 
 
 This is how I personally approach reading source code: I start from how general computation works.
 
-> Given some **data**, and some **\*operation**, then we get a new piece of **data**
+> Given some **data**, and some **operation**, then we get a new piece of **data**
 
 Starting with the very basic, `3 + 4 = 7`. The data is `3` and `4`. The operation is `+`.
 
 If we pile up the abstractions of basic math operations with data abstractions:
 
 - **Complex numbers**:
-  $$(a + bi)(c + di) = (ac - bd) + (ad + bc)i$$
+  $$
+  (a + bi)(c + di) = (ac - bd) + (ad + bc)i
+  $$
 - **Matrix multiplication**:
-  $$C_{ij} = \sum_{k=1}^{n} A_{ik} B_{kj}$$
+  $$
+  C_{ij} = \sum_{k=1}^{n} A_{ik} B_{kj}
+  $$
 - **Convolution**:
-  $$(f * g)(t) = \int_{-\infty}^{\infty} f(\tau)g(t - \tau)\, d\tau$$
+  $$
+  (f * g)(t) = \int_{-\infty}^{\infty} f(\tau)g(t - \tau)\, d\tau
+  $$
 - **A step function**:
-  $$H(x) = \begin{cases} 1 & \text{if } x \ge 0 \\ 0 & \text{if } x < 0 \end{cases}$$
+  $$
+  H(x) = \begin{cases} 1 & \text{if } x \ge 0 \\ 0 & \text{if } x < 0 \end{cases}
+  $$
 
 **From mathematical computation to a Von Neumann machine**, the computation can be lowered through IRs and eventually to assembly code.
 
@@ -132,7 +144,7 @@ Fixnum with 2-bit tag:
 Range: -2^61 to 2^61-1 (doubled!)
 ```
 
-One important distinction: for a fixnum, the upper bits hold the integer value directly (an *immediate*). For all other types, those bits are a heap pointer to the underlying C struct.
+One important distinction: for a fixnum, the upper bits hold the integer value directly (an _immediate_). For all other types, those bits are a heap pointer to the underlying C struct.
 
 ### The Operation Conventions
 
@@ -210,10 +222,10 @@ With the data representation in place, we can now map McCarthy's original 7 axio
 
 ## Mapping McCarthy's 7 Axioms to C
 
-If McCarthy's 7 axioms are the soul of Lisp, the Emacs source is its physical body — but that body is not confined to a single file. The axioms split across three files depending on whether they are about *data representation*, *memory*, or *control flow*:
+If McCarthy's 7 axioms are the soul of Lisp, the Emacs source is its physical body — but that body is not confined to a single file. The axioms split across three files depending on whether they are about _data representation_, _memory_, or _control flow_:
 
 | Axiom   | Meaning                   | C struct / function                                           | File      |
-|---------|---------------------------|---------------------------------------------------------------|-----------|
+| ------- | ------------------------- | ------------------------------------------------------------- | --------- |
 | `atom`  | is it NOT a pair?         | `!CONSP(obj)` (e.g., `EMACS_INT`, `struct Lisp_String`, etc.) | `lisp.h`  |
 | `eq`    | are two refs identical?   | `Lisp_Object` (raw 64-bit word compare)                       | `lisp.h`  |
 | `car`   | first element of pair     | `struct Lisp_Cons` - `.car` field                             | `lisp.h`  |
@@ -222,7 +234,7 @@ If McCarthy's 7 axioms are the soul of Lisp, the Emacs source is its physical bo
 | `quote` | return without evaluating | `Fquote()` — special form                                     | `eval.c`  |
 | `cond`  | branch on predicate       | `Fcond()` — special form                                      | `eval.c`  |
 
-Notice the split: the first four axioms — `atom`, `eq`, `car`, `cdr` — are pure *data* operations, living entirely in `lisp.h`. `cons` crosses into memory management. Only `quote` and `cond` require the *evaluator* — they are the boundary where data becomes behavior.
+Notice the split: the first four axioms — `atom`, `eq`, `car`, `cdr` — are pure _data_ operations, living entirely in `lisp.h`. `cons` crosses into memory management. Only `quote` and `cond` require the _evaluator_ — they are the boundary where data becomes behavior.
 
 PS. Other important files written in C.
 
@@ -233,7 +245,7 @@ PS. Other important files written in C.
 
 ## Next step
 
-The tagged pointer trick Emacs uses is a specific instance of a broader pattern in systems programming: the *tagged union*. In the next post, we will look at how the same idea appears across different languages and eras — from manual C `union` + discriminant, to C++ `std::variant`, to Rust's `enum`. Same problem, different levels of language support.
+The tagged pointer trick Emacs uses is a specific instance of a broader pattern in systems programming: the _tagged union_. In the next post, we will look at how the same idea appears across different languages and eras — from manual C `union` + discriminant, to C++ `std::variant`, to Rust's `enum`. Same problem, different levels of language support.
 
 ---
 
@@ -241,4 +253,3 @@ Emacs Internal Series:
 
 - #01: [Emacs is a Lisp Runtime in C, Not an Editor](@/blog/project/emacs-01.md)
 - #02: Data First — Deconstructing Lisp_Object in C <-- We are here
-
