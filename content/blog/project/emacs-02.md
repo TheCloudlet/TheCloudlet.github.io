@@ -71,7 +71,15 @@ This leads me to three things:
 
 First, modern compilers work from this first principle. LLVM's main challenge is to merge, traverse, and select a sequence of instructions so that we have the least computation time (usually on a single core). MLIR aims to unify lowering across heterogeneous hardware targets, especially when the hardware supports domain-specific operations like convolution, matrix multiplication, and precision conversion. (MLIR is the next planned series to dive in.)
 
-Second, the idea that **code is data, and data is code** keeps showing up for me. Data is just bits; instructions are also just bit patterns stored in memory. The instruction stream lives in the same memory hierarchy as the data it operates on, and the CPU treats some bits as "code" only because the program counter (PC) points to them. From this perspective, Lisp machines and von Neumann machines are computationally equivalent (both are Turing complete), even though their architectures are very different.
+Second, the idea that **code is data, and data is code** keeps showing up for me. Data is just bits; instructions are also just bit patterns stored in memory. The instruction stream lives in the same memory hierarchy as the data it operates on, and the CPU treats some bits as "code" only because the program counter (PC) points to them.
+
+> (Thanks for error correct by r/emacs community)
+>
+> Lisp machines of the day were not a different architectural alternative to "von Neumann machine". They had RAM, disk, cpu, some peripherals attached to them. Basically a high-end workstations that just happened to have an OS written in Lisp, and bunch of user's program also implemented in Lisp, a lisp compiler, and so on. Differences in computational environment, and how one worked with them existed, but from the hardware point of view, Lisp machines, were also von Neumann architecture.
+>
+> They do seem to had some stuff implemented in hardware that accelerated certain computations important for Lisp. But architecturally, this isn't different than say Intel shipping AES encryption in hardware and calling it a "crypto machine", or as we see nowadays, extensions on GPUs that benefit LLMs.
+>
+> — _u/authurno1_ on Reddit
 
 Third, when I read code, I tend to start from the data: in C/C++ terms, the `struct` or private members of a class. Data is often more self-descriptive than operations. Once I understand the data model, the operations become transformations over that model. This is a personal bias, but it matches how I think about functional programming (FP) and data-oriented programming (DOP). It also explains why OOP doesn’t click with me as easily: it starts from behavior and encapsulation, while I prefer to anchor my understanding in data first. From this lens I could talk about side effects, mutability, and other concepts, but that would take us too far.
 
@@ -114,6 +122,8 @@ enum Lisp_Type
     Lisp_Float = 7         // 0b111
   };
 ```
+
+PS. This tagged pointer technique is actually a universal pattern across systems programming. It solves two problems: First, in dynamically typed contexts, the execution engine must know a value's type before operating on it. Second, placing this metadata in an extra struct field wastes memory and causes cache-misses from pointer chasing. To survive memory bus bottlenecks, engineers cram metadata directly into the unused bits of pointers. We'll discuss in the next post.
 
 ### Stealing One More Bit
 
@@ -242,6 +252,18 @@ PS. Other important files written in C.
 - `eval.c` — evaluating those trees
 - `alloc.c` — allocating and garbage-collecting Lisp objects
 - `xdisp.c` — redisplay engine
+
+> Emacs C sources, use a lot of Lisp idioms abstracted as preprocessor macros, masking C language as Lisp look alike. Observe that, when you use them, you are not writing Lisp, you are writing pure C that just happens to look like Lisp. Those preprocessor macros exist for use in C core only, they are not visible to Elisp, and they happen to be macros for practical reasons of C programming: to always get inlined, in both release and debug builds. Alternative would be of course to implement them as inlined functions and I think they have start to replace some of those preprocessor macros with inlined versions. I am not really watching the mailing list and commited patches, so don't take me for the word.
+>
+> If you want connection to the Lisp implementation, I think you should look into Fatom, Feq, Fcar and Fcdr in data.c, which are those "McCarthian operators" we are using in Elisp.
+>
+> Another remark about McCarthian Lisp, since you touch on it, is that Lisp is a theory of computation that also happens to be practical tool. As a computation theory, it stands at the same level as as lambda calculus and turing machine; a mathematical construct, that happens to be runnable, so to say.
+>
+> In McCarthy's papers it varies how many are needed, depending on which paper you read. Regardless, the idea is that those "axioms" is all you need to build computations on. A closed universe. A mathematical theory. Those axioms are like Euclidean axioms, something you can build other mathematical constructs, it is just that here we are talking about computing.
+>
+> However, only in theory, i.e. in McCarthy's papers! :). in practical terms, I don't think there is any practical Lisp, more than toy examples, based on only those first 5, or 9 or 7 or how many forms McCarthy thought at some point in time are "basics". Emacs does not have statements on which are "elementary forms". C core implements ~1700 of "primitive" forms. Graham came up with 17 for Arc. Common Lisp has 25. Now, I have never used Arc, but I am sure that none of Common Lisp implementations in Common Lisp are implemented directly on top of only those 25 so called "special operators", even though, in theory that might have been the idea. Of course I don't know for sure, I discovered Lisp after the Lisp, and am just learning this myself, but to be practical you have to talk to the outside world, and outside world is often a bit more complex than what those 25 forms cover.However, only in theory, i.e. in McCarthy's papers! :). in practical terms, I don't think there is any practical Lisp, more than toy examples, based on only those first 5, or 9 or 7 or how many forms McCarthy thought at some point in time are "basics". Emacs does not have statements on which are "elementary forms". C core implements ~1700 of "primitive" forms. Graham came up with 17 for Arc. Common Lisp has 25. Now, I have never used Arc, but I am sure that none of Common Lisp implementations in Common Lisp are implemented directly on top of only those 25 so called "special operators", even though, in theory that might have been the idea. Of course I don't know for sure, I discovered Lisp after the Lisp, and am just learning this myself, but to be practical you have to talk to the outside world, and outside world is often a bit more complex than what those 25 forms cover.
+>
+> _u/authurno1_ on Reddit
 
 ## Next step
 
