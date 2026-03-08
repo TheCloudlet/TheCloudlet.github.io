@@ -34,7 +34,12 @@ stylesheets = ["abridge.css"]
 author = "Yi-Ping Pan (Cloudlet)"
 keywords = ["compiler", "llvm", "mlir", "c++", "haskell", "optimization"]
 favicon_svg = "favicon.svg"
+favicon16 = "favicon.svg"
+favicon32 = "favicon.svg"
+favicon180 = "favicon.svg"
 ogimage = "favicon.svg"
+banner = "favicon.svg"
+webmanifest = "manifest.json"
 toc = true
 google_analytics = "G-7FD091QMK9"
 

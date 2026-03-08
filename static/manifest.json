@@ -1,0 +1,18 @@
+{
+  "name": "The Cloudlet",
+  "short_name": "Cloudlet",
+  "description": "Notes on compilers, systems programming, and functional programming",
+  "background_color": "#111111",
+  "theme_color": "#333333",
+  "display": "standalone",
+  "orientation": "any",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
