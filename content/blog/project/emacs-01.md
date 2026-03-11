@@ -1,7 +1,7 @@
 +++
 title = "Emacs Internal #01: is a Lisp Runtime in C, Not an Editor"
 description = "Exploring why GNU Emacs embeds a Lisp interpreter in C -- from TECO marcos to Greenspun's Tenth Rule, with architecture comparisons to Neovim and VSCode"
-author = "Yi-Ping Pan (Cloudlet)"
+author = "Cloudet (Yi-Ping Pan)"
 date = 2026-02-26
 
 [taxonomies]
@@ -111,5 +111,6 @@ B. How `Lisp_Object` works?
 
 Emacs Internal Series:
 
-- #01: Emacs is a Lisp Runtime in C, Not an Editor <-- We are here
+- #01: Emacs is a Lisp Runtime in C, Not an Editor
 - #02: [Data First — Deconstructing Lisp_Object in C](@/blog/project/emacs-02.md)
+- #03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/blog/project/emacs-03.md)

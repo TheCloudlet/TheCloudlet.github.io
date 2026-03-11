@@ -267,7 +267,9 @@ PS. Other important files written in C.
 
 ## Next step
 
-The tagged pointer trick Emacs uses is a specific instance of a broader pattern in systems programming: the _tagged union_. In the next post, we will look at how the same idea appears across different languages and eras — from manual C `union` + discriminant, to C++ `std::variant`, to Rust's `enum`. Same problem, different levels of language support.
+The tagged pointer trick Emacs uses handles 8 fundamental types perfectly, but how does the editor fit the remaining dozens of complex types (like Buffers and Windows) within the exact same 3-bit restriction?
+
+In the next post, we will look at how GNU Emacs expands this layout using a technique called "Poor Man's Inheritance", compare it to Tagged Unions (like C++ `std::variant`), and see how LLVM reinvents this exact memory philosophy in the modern era.
 
 ---
 
@@ -275,3 +277,4 @@ Emacs Internal Series:
 
 - #01: [Emacs is a Lisp Runtime in C, Not an Editor](@/blog/project/emacs-01.md)
 - #02: Data First — Deconstructing Lisp_Object in C <-- We are here
+- #03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/blog/project/emacs-03.md)
