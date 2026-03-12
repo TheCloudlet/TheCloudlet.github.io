@@ -6,8 +6,8 @@ date = 2025-11-22
 draft = true
 
 [taxonomies]
-tags = ["llvm", "compiler", "risc-v", "backend", "optimization"]
-categories = ["compiler"]
+categories = ["compiler-design"]
+tags = ["instruction-selection", "register-allocation", "instruction-scheduling", "risc-v"]
 +++
 
 # [WIP] RISC-V Compiler Backend Complete Reference

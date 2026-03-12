@@ -5,8 +5,8 @@ author = "Cloudet (Yi-Ping Pan)"
 date = 2026-02-26
 
 [taxonomies]
-tags = ["c", "system-design", "history", "lisp", "compiler"]
-categories = ["c", "project", "compiler", "emacs"]
+categories = ["systems-programming"]
+tags = ["lisp-interpreter", "teco-macros", "mccarthy-axioms", "greenspun-tenth-rule"]
 +++
 
 I tried to move to an LLM-friendly platform like VSCode or Cursor, but I kept returning to GNU Emacs. After reading other users' stories, I realized this is a common pattern. Very few tools survive 40 years and still feel hard to leave.
@@ -37,7 +37,7 @@ So here is my first big question:
 
 ## The history: Why Emacs Embeds an Elisp Interpreter in C
 
-In the 1970s, hackers at the MIT AI Lab used a text editor called [TECO](https://en.wikipedia.org/wiki/TECO_(text_editor)). Unlike modern editors with a cursor, users had to input a sequence of password-like strings to cast the magic that edits text ([TECO manual](https://github.com/blakemcbride/TECOC/blob/master/doc/teco-manual.txt)). To reduce the pain, people started writing "macros" to speed up the process.
+In the 1970s, hackers at the MIT AI Lab used a text editor called [TECO](<https://en.wikipedia.org/wiki/TECO_(text_editor)>). Unlike modern editors with a cursor, users had to input a sequence of password-like strings to cast the magic that edits text ([TECO manual](https://github.com/blakemcbride/TECOC/blob/master/doc/teco-manual.txt)). To reduce the pain, people started writing "macros" to speed up the process.
 
 ![TECO layout](https://www.copters.com/pictures/teco_layout.gif)
 
@@ -74,10 +74,10 @@ So Vim eventually needed a fork: Neovim using a **Lua runtime** (still an interp
 
 Although the idea looks similar, Neovim often feels faster than Emacs in practice because it leans on newer runtimes and techniques (e.g., LuaJIT, async jobs, and RPC). The following are some ways Neovim outperforms Emacs.
 
-|               | Emacs Lisp                                     | Neovim                                                                                                                                 |
-|:--------------|:-----------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------|
+|                   | Emacs Lisp                                     | Neovim                                                                                                                                 |
+| :---------------- | :--------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
 | **architecture**  | Monolithic C core + embedded Elisp interpreter | C core + embedded LuaJIT + Msgpack RPC host/guest plugins                                                                              |
-| **concurrency** | single-threaded main loop                      | event loop; async jobs and RPC-based plugins                                                                                           |
+| **concurrency**   | single-threaded main loop                      | event loop; async jobs and RPC-based plugins                                                                                           |
 | **union tagging** | tagged pointers + cons cells/immediates        | [NaN-tagging](https://medium.com/@kannanvijayan/exboxing-bridging-the-divide-between-tag-boxing-and-nan-boxing-07e39840e0ca) in LuaJIT |
 
 For modern editors like VSCode, an interpreter is still inside. VSCode is essentially a web browser for code, built on Electron (Chromium + V8). That means a **VM is part of the editor's core**. From a language-design viewpoint it may look less elegant (JavaScript is slow), but in practice it feels fast because of JIT, SIMD, and async IPC that keeps the UI responsive. Either way, the pattern repeats: a VM sits at the core of the editor.
@@ -97,13 +97,14 @@ This is also why my cache simulator [Stratum](https://github.com/TheCloudlet/Str
 ## Next step:
 
 A. How to build a tiny Emacs Lisp interpreter in C with only seven elements
-   1) quote
-   2) atom
-   3) eq
-   4) car
-   5) cdr
-   6) cons
-   7) cond
+
+1.  quote
+2.  atom
+3.  eq
+4.  car
+5.  cdr
+6.  cons
+7.  cond
 
 B. How `Lisp_Object` works?
 

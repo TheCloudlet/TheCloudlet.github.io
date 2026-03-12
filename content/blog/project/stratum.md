@@ -5,8 +5,8 @@ author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-01-29
 
 [taxonomies]
-tags = ["c", "cpp", "template", "cache-simulation", "dsl", "sicp"]
-categories = ["cpp", "project"]
+categories = ["computer-architecture"]
+tags = ["cache-hierarchy", "template-metaprogramming", "cache-simulator"]
 +++
 
 ## The Interview That Changed Everything
@@ -58,9 +58,7 @@ Seemed reasonable, right?
 
 The interviewer paused, then continued:
 
-> **"What if you ran your benchmark on an ARM big.LITTLE SoC instead of x86?"**
-> **"What if the cache associativity changed?"**
-> **"What if the replacement policy was different?"**
+> **"What if you ran your benchmark on an ARM big.LITTLE SoC instead of x86?"** > **"What if the cache associativity changed?"** > **"What if the replacement policy was different?"**
 
 My smile faded. If this were a cartoon, there'd be question marks floating above my head.
 
@@ -104,10 +102,12 @@ Cache size: C = S × E × B data bytes
 This is what the interviewer was asking about. Associativity (E-way) determines how many cache lines in a set can hold data:
 
 1. **Direct-mapped (E=1)**: Each address maps to exactly ONE location
+
    - Fastest (no way selection)
    - Most conflict misses
 
 2. **N-way set-associative (E=N)**: Each address can go into N locations within a set
+
    - Hardware checks all N tags in parallel
    - Requires N-input multiplexer -> higher latency
 
@@ -401,10 +401,12 @@ You can't just benchmark on one machine and claim victory. Cache-sensitive code 
 **What Stratum Does Well:**
 
 1. **Pre-Silicon Validation**: Test cache configurations before committing to RTL design
+
    - Example: Compare 2-level vs 3-level hierarchy trade-offs
    - Evidence-based decision making for SoC development
 
 2. **Research and Education**:
+
    - Compare replacement policies (LRU vs FIFO vs Random) with real traces
    - Teach cache concepts with observable, measurable behavior
    - Sensitivity analysis for associativity and block size
@@ -473,11 +475,13 @@ Building Stratum closed that gap.
 **What this project taught me:**
 
 1. **Cache behavior is about access patterns, not just capacity**
+
    - My rb-tree optimization worked because the path array had **sequential access** (L1-friendly)
    - The old parent-pointer approach had **random heap access** (L1-hostile)
    - Conflict misses matter more than capacity misses (associativity isn't just a spec number)
 
 2. **Template metaprogramming can mirror hardware constraints**
+
    - Zero-cost abstraction: cache hierarchy as types, not virtual dispatch
    - Compile-time binding mirrors hardware reality (topology is fixed at synthesis)
    - Design constraints become compiler guarantees

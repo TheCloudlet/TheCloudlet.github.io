@@ -4,8 +4,8 @@ description = "A quick checklist for understanding memory systems in computer ar
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2025-12-07
 [taxonomies]
-tags = ["computer-systems", "memory", "cache", "virtual-memory", "interview-prep"]
-categories = ["Computer Architecture", "System Programming"]
+categories = ["computer-architecture"]
+tags = ["virtual-memory", "cpu-cache", "translation-lookaside-buffer", "page-table"]
 +++
 
 # Memory Systems Interview Prep

@@ -5,8 +5,8 @@ author = "Yi-Ping Pan (Cloudlet)"
 date = 2025-12-02
 
 [taxonomies]
-tags = ["c", "cpp", "strings", "google", "parser"]
-categories = ["cpp", "project"]
+categories = ["software-tooling"]
+tags = ["ast-parsing", "libclang", "string-interning", "type-canonicalization"]
 +++
 
 ## Why I Started This Project?
@@ -100,6 +100,7 @@ Fair point! However, here's the thing: writing a Python script to manage complex
 Even with a script wrapping text-matching logic, you'll still run into two fundamental C++ features that trip up regex—but Coogle handles them naturally:
 
 1. **Type Aliases (The Semantic Gap)** — Regex sees text; Coogle sees types.
+
    - Code: `using NodeID = uint64_t;`
    - Search: You want a function returning `uint64_t`.
    - Regex/Python: Will miss `NodeID get_id()` because `"NodeID" != "uint64_t"`.

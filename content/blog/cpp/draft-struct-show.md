@@ -6,17 +6,19 @@ date = 2026-01-30
 draft = true
 
 [taxonomies]
-tags = ["fixme"]
-categories = ["cpp"]
+categories = ["systems-programming"]
+tags = ["data-serialization", "debugging", "string-formatting"]
 +++
 
 ## Structure thinking
 
 - Intro, why, coverity (CL: 6463213)
-  - Expalin: Handling mutiple types int, long, char* printing when debugging
+
+  - Expalin: Handling mutiple types int, long, char\* printing when debugging
     std::swtringstream ss;; return string
 
 - What I did?
+
   - Lambda function (3 kinds)
   - result - no more `ss << "\txxx - " << value` and weird if else checking string null
 
@@ -85,4 +87,3 @@ std::string debugStruct(struct my_struct* ps) {
 ---
 
 ## It all started from a fixing a static analysis issue
-

@@ -5,8 +5,8 @@ author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-03-05
 
 [taxonomies]
-tags = ["c", "system-design", "history", "lisp", "compiler"]
-categories = ["c", "project", "compiler", "emacs"]
+categories = ["systems-programming"]
+tags = ["lisp-object", "memory-layout", "c-macros", "tagged-pointer"]
 
 [extra]
 math = true

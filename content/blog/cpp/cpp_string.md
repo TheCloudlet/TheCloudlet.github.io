@@ -5,8 +5,8 @@ author = "Yi-Ping Pan (Cloudlet)"
 date = 2025-11-20
 
 [taxonomies]
-tags = ["c", "cpp", "strings", "memory-management", "pmr", "allocators", "vfs"]
-categories = ["cpp"]
+categories = ["systems-programming"]
+tags = ["std-string-view", "pmr-allocator", "small-string-optimization"]
 +++
 
 ## Background
@@ -200,9 +200,11 @@ Knowing this aliasing can be enough to solve my issue, but maybe understanding e
 **Deconstructing the monster**
 
 - **CharT**:
+
   - Defines what kind of character the string holds—`char` for ASCII/UTF-8, `wchar_t` for wide characters, `char16_t` for UTF-16, etc. Simple enough.
 
 - **Traits**:
+
   - Hmm... is more interesting. Accoding to [cppreference:char_traits](https://en.cppreference.com/w/cpp/string/char_traits):
 
     > The char_traits class is a traits class template that abstracts basic character and string operations for a given character type. The defined operation set is such that generic algorithms almost always can be implemented in terms of it.

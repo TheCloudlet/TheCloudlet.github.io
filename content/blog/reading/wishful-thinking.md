@@ -5,8 +5,8 @@ author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-02-04
 
 [taxonomies]
-tags = ["thinking", "reading", "sicp"]
-categories = ["thinking", "cpp"]
+categories = ["software-architecture"]
+tags = ["sicp-wishful-thinking", "lazy-evaluation", "abstraction-barrier"]
 +++
 
 This is **not** a pure technical blog post. It is an attempt to connect engineering principles to real life.
@@ -57,7 +57,6 @@ bool equal_rat(const Rational& x, const Rational& y) {
   return numer(x) * denom(y) == numer(y) * denom(x);
 }
 ```
-
 
 Now, the rest of the missing pieces tend to emerge naturally, almost effortlessly.
 
@@ -142,9 +141,9 @@ This is the most important part.
 2. **Execute lazily. Live at runtime.**
 
    This idea maps surprisingly well to Zen thinking. Zen does not ask you to stop thinking—it asks you to stop precomputing.
-   
-   When I execute a task, I try to stay fully inside the current stack frame. I am only here, only now. In that sense, I am a single-threaded system. 
-   
+
+   When I execute a task, I try to stay fully inside the current stack frame. I am only here, only now. In that sense, I am a single-threaded system.
+
    Humans are not compilers running with `-O3`. We don't need to speculate every branch, unroll every loop, or pipeline every future scenario. Multitasking looks powerful, but for human brains it often results in cache stalls, context switching, and mental thrashing.
 
 3. **Meaning emerges during execution, not before it.**
