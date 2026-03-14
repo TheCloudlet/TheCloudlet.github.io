@@ -32,28 +32,29 @@ config.extra.comments.remark42 %}
       var r = n.createElement("script"),
         c = ".js",
         d = n.head || n.body;
-      ("noModule" in r ? ((r.type = "module"), (c = ".mjs")) : (r.async = !0),
+      "noModule" in r ? ((r.type = "module"), (c = ".mjs")) : (r.async = !0),
         (r.defer = !0),
         (r.src = remark_config.host + "/web/" + e[o] + c),
-        d.appendChild(r));
+        d.appendChild(r);
     }
   })(remark_config.components || ["embed"], document);
 </script>
 {%- endif %} {%- endblock comments_init %} {%- block content %}
 <article>
   {%- block page_header %} {{- macros::title_post(page=page, config=config) }}
-  {%- if not page.extra.hide_meta %} {%- if config.extra.meta_post.position %} {%- if
-  config.extra.meta_post.position == "top" or config.extra.meta_post.position ==
-  "both" %} {{- macros::meta_post(page=page, config=config) }} {%- endif %}{%-
-  endif %} {%- endif %} {%- endblock page_header %} {# In Page Series Navigation #} {%- if
-  config.extra.series | default(value=true) %} {%- if page.extra.series %} {%-
-  set tag = get_taxonomy_term(kind="tags", term=page.extra.series, lang=lang) %}
-  {%- set page_num = tag.page_count | as_str %} {%- if lang !=
-  config.default_language %} {%- set parts_string =
-  macros::translate(key='Series_parts', default='Series', i18n=i18n) |
-  replace(from="$NUMBER_OF_PARTS", to=page_num) %} {% else %} {%- set
-  parts_string = config.extra.Series_parts | default(value="Series") |
-  replace(from="$NUMBER_OF_PARTS", to=page_num) %} {% endif -%}
+  {%- if not page.extra.hide_meta %} {%- if config.extra.meta_post.position %}
+  {%- if config.extra.meta_post.position == "top" or
+  config.extra.meta_post.position == "both" %} {{- macros::meta_post(page=page,
+  config=config) }} {%- endif %}{%- endif %} {%- endif %} {%- endblock
+  page_header %} {# In Page Series Navigation #} {%- if config.extra.series |
+  default(value=true) %} {%- if page.extra.series %} {%- set tag =
+  get_taxonomy_term(kind="tags", term=page.extra.series, lang=lang) %} {%- set
+  page_num = tag.page_count | as_str %} {%- if lang != config.default_language
+  %} {%- set parts_string = macros::translate(key='Series_parts',
+  default='Series', i18n=i18n) | replace(from="$NUMBER_OF_PARTS", to=page_num)
+  %} {% else %} {%- set parts_string = config.extra.Series_parts |
+  default(value="Series") | replace(from="$NUMBER_OF_PARTS", to=page_num) %} {%
+  endif -%}
 
   <div class="block">
     <div class="blockdiv">
@@ -82,53 +83,109 @@ config.extra.comments.remark42 %}
 
   <hr />
 
-  {#- Share links -#}
-  {%- set encoded_url = page.permalink | urlencode %}
-  {%- set encoded_title = page.title | urlencode %}
+  {#- Share links -#} {%- set encoded_url = page.permalink | urlencode %} {%-
+  set encoded_title = page.title | urlencode %}
   <p class="post-meta-line">
     &gt; share on
-    <a href="https://twitter.com/intent/tweet?url={{ encoded_url }}&text={{ encoded_title }}" target="_blank" rel="noopener">twitter</a> /
-    <a href="https://bsky.app/intent/compose?text={{ encoded_title }}%20{{ encoded_url }}" target="_blank" rel="noopener">bluesky</a> /
-    <a href="https://mastodon.social/share?text={{ encoded_title }}%20{{ encoded_url }}" target="_blank" rel="noopener">mastodon</a> /
-    <a href="https://www.facebook.com/sharer/sharer.php?u={{ encoded_url }}" target="_blank" rel="noopener">facebook</a> /
-    <a href="https://www.reddit.com/submit?url={{ encoded_url }}&title={{ encoded_title }}" target="_blank" rel="noopener">reddit</a> /
-    <a href="https://t.me/share/url?url={{ encoded_url }}&text={{ encoded_title }}" target="_blank" rel="noopener">telegram</a> /
-    <a href="mailto:yipingp@outlook.com?subject={{ encoded_title }}&body={{ encoded_url }}">email</a>
+    <a
+      href="https://twitter.com/intent/tweet?url={{ encoded_url }}&text={{ encoded_title }}"
+      target="_blank"
+      rel="noopener"
+      >twitter</a
+    >
+    /
+    <a
+      href="https://bsky.app/intent/compose?text={{ encoded_title }}%20{{ encoded_url }}"
+      target="_blank"
+      rel="noopener"
+      >bluesky</a
+    >
+    /
+    <a
+      href="https://mastodon.social/share?text={{ encoded_title }}%20{{ encoded_url }}"
+      target="_blank"
+      rel="noopener"
+      >mastodon</a
+    >
+    /
+    <a
+      href="https://www.facebook.com/sharer/sharer.php?u={{ encoded_url }}"
+      target="_blank"
+      rel="noopener"
+      >facebook</a
+    >
+    /
+    <a
+      href="https://www.reddit.com/submit?url={{ encoded_url }}&title={{ encoded_title }}"
+      target="_blank"
+      rel="noopener"
+      >reddit</a
+    >
+    /
+    <a
+      href="https://t.me/share/url?url={{ encoded_url }}&text={{ encoded_title }}"
+      target="_blank"
+      rel="noopener"
+      >telegram</a
+    >
+    /
+    <a
+      href="mailto:yipingp@outlook.com?subject={{ encoded_title }}&body={{ encoded_url }}"
+      >email</a
+    >
   </p>
 
-  {#-
-    Related Posts: rank by tag overlap.
-    Strategy: add each candidate once per shared tag into a list, then
-    deduplicate by picking the first occurrence of each permalink.
-    A post sharing 3 tags appears 3× in candidates → picked first → top ranked.
-  -#}
-  {%- if page.taxonomies.tags %}
-    {%- set_global candidates = [] %}
-    {%- for rtag in page.taxonomies.tags %}
-      {%- set rtag_data = get_taxonomy_term(kind="tags", term=rtag, lang=lang) %}
-      {%- for p in rtag_data.pages %}
-        {%- if p.permalink != page.permalink %}
-          {%- set_global candidates = candidates | concat(with=p) %}
-        {%- endif %}
-      {%- endfor %}
-    {%- endfor %}
-    {%- set related = candidates | unique(attribute="permalink") | slice(end=3) %}
-    {%- if related %}
-  <p class="post-meta-line">&gt; related articles:<br />
-    {%- for p in related %}
-    &nbsp;&nbsp;{{ loop.index }}) <a href="{{ p.permalink | safe }}">{{ p.title }}</a><br />
-    {%- endfor %}
+  {#- Related Posts: Render random 3 articles via JavaScript with SSR fallback.
+  -#} {%- set_global all_pages = [] %} {%- set cat_taxonomy =
+  get_taxonomy(kind="categories", lang=lang) %} {%- if cat_taxonomy %} {%- for
+  cat in cat_taxonomy.items %} {%- for p in cat.pages %} {%- if p.permalink !=
+  page.permalink and not p.draft %} {%- set_global all_pages = all_pages |
+  concat(with=p) %} {%- endif %} {%- endfor %} {%- endfor %} {%- endif %} {%-
+  set all_pages = all_pages | unique(attribute="permalink") %} {%- if all_pages
+  | length > 0 %}
+  <p class="post-meta-line">
+    &gt; related articles:<br />
+    <span id="random-articles-container">
+      <noscript>
+        {%- set fallback = all_pages | slice(end=3) %} {%- for p in fallback %}
+        &nbsp;&nbsp;{{ loop.index }})
+        <a href="{{ p.permalink | safe }}">{{ p.title }}</a><br />
+        {%- endfor %}
+      </noscript>
+    </span>
   </p>
+  <script>
+    (function() {
+      var allArticles = [
+        {%- for p in all_pages %}
+        { title: {{ p.title | json_encode() | safe }}, url: {{ p.permalink | json_encode() | safe }} }{% if not loop.last %},{% endif %}
+        {%- endfor %}
+      ];
+
+      if (allArticles.length > 0) {
+        // Simple Fisher-Yates shuffle
+        for (var i = allArticles.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var temp = allArticles[i];
+          allArticles[i] = allArticles[j];
+          allArticles[j] = temp;
+        }
+        var selected = allArticles.slice(0, 3);
+        var html = "";
+        for (var i = 0; i < selected.length; i++) {
+          html += "&nbsp;&nbsp;" + (i + 1) + ") <a href='" + selected[i].url + "'>" + selected[i].title + "</a><br />";
+        }
+        document.getElementById("random-articles-container").innerHTML = html;
+      }
+    })();
+  </script>
   <hr />
-    {%- endif %}
-  {%- endif %}
-
-  {%- if not page.extra.hide_meta %} {%- if
+  {%- endif %} {%- if not page.extra.hide_meta %} {%- if
   config.extra.meta_post.position %} {%- if config.extra.meta_post.position ==
   "bottom" or config.extra.meta_post.position == "both" %} {{-
-  macros::meta_post(page=page, config=config) }} {%- endif %}{%- endif %} {%- endif %} {%-
-  block page_footer %} {{- macros::footer(page=page, config=config) }} {%-
-  endblock page_footer %} {%- block comments_body %} {%- if not
+  macros::meta_post(page=page, config=config) }} {%- endif %}{%- endif %} {%-
+  endif %} {%- block page_footer %} {{- macros::footer(page=page, config=config)
+  }} {%- endblock page_footer %} {%- block comments_body %} {%- if not
   config.extra.comment_system or config.extra.comment_system == "hyvor" %} {#
   Hyvor block removed to prevent build errors #} {%- elif
   config.extra.comment_system == "remark42" and config.extra.comments.remark42

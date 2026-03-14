@@ -3,6 +3,8 @@ title = "Memory Systems Interview Prep Checklist"
 description = "A quick checklist for understanding memory systems in computer architecture"
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2025-12-07
+draft = true
+
 [taxonomies]
 categories = ["computer-architecture"]
 tags = ["virtual-memory", "cpu-cache", "translation-lookaside-buffer", "page-table"]
