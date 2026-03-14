@@ -202,7 +202,13 @@ Why clear the lower 3 bit tag using subtraction (`-`) instead of a bitwise AND (
 
 On architectures like x86, memory addressing supports `Base - Offset`. A C compiler can fold the tag clearing and the subsequent struct access (like `.car` or `.cdr`) into a single instruction, saving a CPU register.
 
-Wait, why would an application developer care about instruction folding and x86 addressing modes? Because GNU Emacs was built by the same maniacs who built GCC. What??????
+> Historical Update: The Evolution of LSB Tagging
+>
+> I originally joked that this optimization was because Emacs was built by the "same maniacs who built GCC." While true that early GNU hackers were intimately familiar with compilers, the specific evolution of this 3-bit LSB (Least Significant Bit) tagging scheme has a more precise history.
+>
+> According to the paper [Evolution of Emacs Lisp](https://dl.acm.org/doi/epdf/10.1145/3386324), early Emacs used 7-bit MSB (Most Significant Bit) tags. The modern LSB tagging scheme, which elegantly exploits the 8-byte alignment of heap allocations, was actually pioneered and implemented by Stefan Monnier during the development of Emacs 22 in 2007.
+>
+> (Huge thanks to Reddit user *GuDzpoz* for the rigorous fact-checking and for pointing me to this paper!)
 
 ### The Big Picture
 
@@ -276,5 +282,5 @@ In the next post, we will look at how GNU Emacs expands this layout using a tech
 Emacs Internal Series:
 
 - #01: [Emacs is a Lisp Runtime in C, Not an Editor](@/blog/project/emacs-01.md)
-- #02: Data First — Deconstructing Lisp_Object in C <-- We are here
+- #02: Data First — Deconstructing Lisp_Object in C
 - #03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/blog/project/emacs-03.md)
