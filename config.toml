@@ -1,6 +1,7 @@
 base_url = "https://thecloudlet.github.io"
 title = "The Cloudlet"
 description = "Notes on compilers, systems programming, and functional programming"
+author = "Yi-Ping Pan (Cloudlet)"
 theme = "abridge"
 compile_sass = true
 build_search_index = true
