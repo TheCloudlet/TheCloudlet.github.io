@@ -339,6 +339,14 @@ enum pvec_type
 
 This elegant combination of **Tagged Pointers** (for high-speed, core types and immediate integers without memory allocations) and **Poor Man's Inheritance** (for an extensible array of complex types) is how Emacs achieves dynamic typing in statically-typed C without sacrificing critical GC performance.
 
+**Note on C/C++ Undefined Behavior:**
+
+While Emacs relies heavily on GCC-specific behaviors to get away with manipulating pointer bits directly, doing this in standard modern C/C++ on raw pointers is a fast track to **Undefined Behavior (UB)**. It breaks compiler optimizations relying on **Pointer Provenance**.
+
+To safely implement tagged pointers in C/C++, one must cast the pointer to `uintptr_t` (or `intptr_t`) before bitwise operations. The C++ committee is actually aware of this architectural need; there is an active proposal [P3125R0](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3125r0.html) by Hana Dusíková aiming to add a standard library utility for pointer tagging that explicitly preserves provenance. (Thanks to HN users *tialaramex* and *trws* for pointing this out).
+
+Unlike C++, **Rust** has recently stabilized its **Strict Provenance API** to tackle this exact problem. Instead of risking UB, Rust provides methods like `ptr::map_addr`, which allows developers to safely map a pointer to an integer, manipulate the tag bits, and map it back without confusing LLVM's aliasing model. It offers a standardized way to hide flags in pointers while playing nicely with the compiler's strict rules. (Thanks to HN user *shadowgovt*, *tialaramex*, *VorpalWay*)
+
 ## 05. The Modern Reincarnation: LLVM's Custom RTTI
 
 The most fascinating part about reading Emacs's 1980s source code is discovering that these techniques are still highly applicable and relevant even in the modern C++ era. The combination of **Tagged Pointer** + **Poor Man's Inheritance** is no exception.
@@ -377,7 +385,7 @@ public:
 };
 ```
 
-Invoking `isa<Argument>(Val)` evaluates at compile time to `Argument::classof(Val)`, resulting in an integer comparison on `SubclassID`.
+Invoking `isa<Argument>(Val)` evaluates at compile time to `Argument::classof(Val)`, resulting in an intjeger comparison on `SubclassID`. -- [llvm docs](https://llvm.org/docs/ProgrammersManual.html#the-isa-cast-and-dyn-cast-templates)
 
 ```cpp
 // How LLVM developers write type dispatch
@@ -389,6 +397,12 @@ if (isa<Argument>(Val)) {
 
 Both Emacs and LLVM handle dynamic dispatch over a hierarchy of types by embedding tag information directly in the base structures and performing integer comparisons before casting.
 
+> **Community Updates & Further Reading**
+>
+> - **On CRTP & Static Polymorphism:** Huge thanks to [Nick Desaulniers](https://nickdesaulniers.github.io/) for highlighting LLVM's elegant use of CRTP. For deeper dives into devirtualization, I highly recommend the [Wikipedia CRTP page](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern) and David Alvarez Rosa's excellent post on [Devirtualization and Static Polymorphism](https://david.alvarezrosa.com/posts/devirtualization-and-static-polymorphism/).
+>
+> - **On LLVM Internals:** While the `classof` pattern has been the backbone of LLVM's Custom RTTI for years, LLVM is continuously evolving its architecture. Recently, it introduced the [`CastInfo` trait](https://llvm.org/doxygen/structllvm_1_1CastInfo.html), which decouples the casting mechanism from class definitions and relies more heavily on template specialization. *(Thanks to HN user mshockwave for this architectural update).*
+
 ## 06. Other Tagged Pointer Usages
 
 The pattern of storing information in unused bits of pointers or headers is found in other system implementations:
@@ -398,6 +412,7 @@ The pattern of storing information in unused bits of pointers or headers is foun
 - **PostgreSQL**: Encodes transaction visibility metadata in the bit-fields of tuple headers.
 - **LLVM `PointerIntPair<>`**: A C++ template utility for packing integers into pointer alignment padding.
 - **ARM64 Top Byte Ignore (TBI)**: Hardware configuration that allows the top 8 bits of a 64-bit pointer to be used for tags (utilized in iOS/macOS).
+- [Faster Laziness Using Dynamic Pointer Tagging (Simon Marlow et al.)](https://simonmar.github.io/bib/papers/ptr-tagging.pdf) (thanks to HN user *internet_points* for the reference)
 
 ## Conclusion
 
