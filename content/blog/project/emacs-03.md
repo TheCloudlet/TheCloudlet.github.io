@@ -13,6 +13,14 @@ math = true
 math_auto_render = true
 +++
 
+> **[Update 2026-03-17]**
+>
+> Thanks to the Hacker News community (discussion id=47349780) for valuable architectural context, highlighting the C++ UB on raw pointers, Rust's Strict Provenance API, and modern LLVM `CastInfo` RTTI (specifically _ndesaulniers_, _internet_points_, _tialaramex_, _trws_, _jcranmer_, _shadowgovt_, and _mshockwave_).
+>
+> Also, thanks to the Reddit community (specifically _GuDzpoz_) for fact-checking the historical attribution of the LSB pointer tagging evolution.
+>
+> Furthermore, thanks to the rigorous peer review by the Lobsters community (specifically _kana_). I highly recommend checking out the _Evolution of Emacs Lisp_ paper for a deeper historical dive.
+
 ## Recap
 
 From the [previous article](@/blog/project/emacs-01.md), we examined how GNU Emacs represents every Lisp value — integers, symbols, cons cells, strings, buffers — inside a single 64-bit slot called `Lisp_Object`. Because all heap objects are 8-byte aligned and the lowest 3 bits of any valid pointer are always zero, Emacs reclaims these "free" bits and uses them as a type tag.
@@ -27,17 +35,22 @@ The more fundamental question is: **when a single variable must hold values of d
 
 Data in memory is represented as bits. To operate on it, we define its shape. If we modify the value of `score`, we load the data from `base + 4 bytes`, write a `32-bit value`, and store it back.
 
+(Assume we are using 64-bit system)
+
 ```c
 #include <stdint.h>
 
 struct Person {
-    uint8_t  age;        // offset  0, size 1
-    // [3 bytes padding]    offset  1  (align next field to 4)
-    uint32_t score;      // offset  4, size 4
-    uint64_t id;         // offset  8, size 8
+    uint8_t  age;        // offset  0, size  1
+    // [3 bytes padding] // offset  1  (align next field to 4-byte boundary)
+    uint32_t score;      // offset  4, size  4
+    uint64_t id;         // offset  8, size  8
     char     name[12];   // offset 16, size 12
+    // [4 bytes padding] // offset 28  (align entire struct to 8-byte boundary)
 };
-// sizeof(Person) == 28, no trailing padding needed
+// sizeof(Person) == 32
+// Note: On a 32-bit machine, max alignment is 4 bytes, so sizeof(Person) would be 28 with no trailing padding.
+// On a 64-bit machine, the 8-byte alignment requirement of `uint64_t` forces 4 bytes of trailing padding.
 ```
 
 The compiler remembers the shape of the data so the runtime does not have to.
@@ -171,8 +184,6 @@ struct fat_pointer {
 
 Comparing fat pointers to tagged pointers: A fat pointer is smaller than a tagged union, but it doubles the memory size compared to a 64-bit tagged pointer. This changes the memory footprint and the Garbage Collector (GC) scanning workload. Emacs was designed to keep the `Lisp_Object` within a single 64-bit word.
 
-PS. It's a crime to waste memory in the 1980s — a typical workstation had around 256 KB of RAM, which is less than the size of a single modern emoji in a Unicode font file. Doubling every Lisp_Object from 8 to 16 bytes wasn't an engineering tradeoff. It was a confession.
-
 ## 04. Emacs: Tagged Pointer + Poor Man's Inheritance
 
 Since GNU Emacs uses the lowest 3 bits for tags, it is strictly limited to 8 fundamental types. If you look at `enum Lisp_Type` in `src/lisp.h`, you'll see exactly that:
@@ -185,6 +196,8 @@ Since GNU Emacs uses the lowest 3 bits for tags, it is strictly limited to 8 fun
 6. `Lisp_Cons`
 7. `Lisp_Float`
    _(plus one unused type)_
+
+(Historical Note: As documented in the "Evolution of Emacs Lisp" paper, Emacs didn't always use the lowest 3 bits. In its early 32-bit days, it used a 7-bit tag located in the Most Significant Bits (MSB). It wasn't until Emacs 22 in 2007 that Stefan Monnier reworked the tagging scheme, moving the 3 tag bits to the Least Significant Bits (LSB) to better utilize the address space.)
 
 ```text
 McCarthy's Lisp (1960)          abstract math
@@ -343,13 +356,13 @@ This elegant combination of **Tagged Pointers** (for high-speed, core types and 
 
 While Emacs relies heavily on GCC-specific behaviors to get away with manipulating pointer bits directly, doing this in standard modern C/C++ on raw pointers is a fast track to **Undefined Behavior (UB)**. It breaks compiler optimizations relying on **Pointer Provenance**.
 
-To safely implement tagged pointers in C/C++, one must cast the pointer to `uintptr_t` (or `intptr_t`) before bitwise operations. The C++ committee is actually aware of this architectural need; there is an active proposal [P3125R0](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3125r4.html) by Hana Dusíková aiming to add a standard library utility for pointer tagging that explicitly preserves provenance. (Thanks to HN users *tialaramex* and *trws* for pointing this out).
+To safely implement tagged pointers in C/C++, one must cast the pointer to `uintptr_t` (or `intptr_t`) before bitwise operations. The C++ committee is actually aware of this architectural need; there is an active proposal [P3125R0](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3125r4.html) by Hana Dusíková aiming to add a standard library utility for pointer tagging that explicitly preserves provenance. (Thanks to HN users _tialaramex_ and _trws_ for pointing this out).
 
-Unlike C++, **Rust** has recently stabilized its **Strict Provenance API** to tackle this exact problem. Instead of risking UB, Rust provides methods like `ptr::map_addr`, which allows developers to safely map a pointer to an integer, manipulate the tag bits, and map it back without confusing LLVM's aliasing model. It offers a standardized way to hide flags in pointers while playing nicely with the compiler's strict rules. (Thanks to HN user *shadowgovt*, *tialaramex*, *VorpalWay*)
+Unlike C++, **Rust** has recently stabilized its **Strict Provenance API** to tackle this exact problem. Instead of risking UB, Rust provides methods like `ptr::map_addr`, which allows developers to safely map a pointer to an integer, manipulate the tag bits, and map it back without confusing LLVM's aliasing model. It offers a standardized way to hide flags in pointers while playing nicely with the compiler's strict rules. (Thanks to HN user _shadowgovt_, _tialaramex_, _VorpalWay_)
 
 ## 05. The Modern Reincarnation: LLVM's Custom RTTI
 
-The most fascinating part about reading Emacs's 1980s source code is discovering that these techniques are still highly applicable and relevant even in the modern C++ era. The combination of **Tagged Pointer** + **Poor Man's Inheritance** is no exception.
+The most fascinating part about reading Emacs's source code is discovering that these techniques are still highly applicable and relevant even in the modern C++ era. The combination of **Tagged Pointer** + **Poor Man's Inheritance** is no exception.
 
 By looking at the source code of **LLVM**, engineers explicitly disable the C++ standard **RTTI** (`-fno-rtti`) and `dynamic_cast`. Instead, LLVM literally reinvents Emacs's "Poor Man's Inheritance" and Tagging system, but wraps it in modern C++ templates. It's called Custom RTTI.
 
@@ -400,19 +413,18 @@ Both Emacs and LLVM handle dynamic dispatch over a hierarchy of types by embeddi
 > **Community Updates & Further Reading**
 >
 > - **On CRTP & Static Polymorphism:** Huge thanks to [Nick Desaulniers](https://nickdesaulniers.github.io/) for highlighting LLVM's elegant use of CRTP. For deeper dives into devirtualization, I highly recommend the [Wikipedia CRTP page](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern) and David Alvarez Rosa's excellent post on [Devirtualization and Static Polymorphism](https://david.alvarezrosa.com/posts/devirtualization-and-static-polymorphism/).
->
-> - **On LLVM Internals:** While the `classof` pattern has been the backbone of LLVM's Custom RTTI for years, LLVM is continuously evolving its architecture. Recently, it introduced the [`CastInfo` trait](https://llvm.org/doxygen/structllvm_1_1CastInfo.html), which decouples the casting mechanism from class definitions and relies more heavily on template specialization. *(Thanks to HN user mshockwave for this architectural update).*
+> - **On LLVM Internals:** While the `classof` pattern has been the backbone of LLVM's Custom RTTI for years, LLVM is continuously evolving its architecture. Recently, it introduced the [`CastInfo` trait](https://llvm.org/doxygen/structllvm_1_1CastInfo.html), which decouples the casting mechanism from class definitions and relies more heavily on template specialization. _(Thanks to HN user mshockwave for this architectural update)._
 
 ## 06. Other Tagged Pointer Usages
 
 The pattern of storing information in unused bits of pointers or headers is found in other system implementations:
 
 - **Linux Kernel Red-Black Trees**: Uses the lowest bits of parent pointers to store the node color.
-- **LuaJIT and V8 (NaN Boxing)**: Uses the payload space of IEEE 754 "Not-a-Number" `double`s to encode pointers.
+- **LuaJIT (NaN Boxing)**: Uses the payload space of IEEE 754 "Not-a-Number" `double`s to encode pointers.
 - **PostgreSQL**: Encodes transaction visibility metadata in the bit-fields of tuple headers.
 - **LLVM `PointerIntPair<>`**: A C++ template utility for packing integers into pointer alignment padding.
 - **ARM64 Top Byte Ignore (TBI)**: Hardware configuration that allows the top 8 bits of a 64-bit pointer to be used for tags (utilized in iOS/macOS).
-- [Faster Laziness Using Dynamic Pointer Tagging (Simon Marlow et al.)](https://simonmar.github.io/bib/papers/ptr-tagging.pdf) (thanks to HN user *internet_points* for the reference)
+- [Faster Laziness Using Dynamic Pointer Tagging (Simon Marlow et al.)](https://simonmar.github.io/bib/papers/ptr-tagging.pdf) (thanks to HN user _internet_points_ for the reference)
 
 ## Conclusion
 
