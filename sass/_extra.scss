@@ -10,7 +10,7 @@
 
 :root {
   // -- Fonts --
-  --code-font: "Fira Code", monospace;
+  --code-font: ui-monospace, monospace;
 
   // -- GitHub Dark Syntax Highlighting --
   // We use !important or high specificity to override Abridge's mode-based settings
@@ -78,7 +78,7 @@ article {
   li,
   details,
   summary {
-    font-family: "IBM Plex Sans", sans-serif;
+    font-family: system-ui, -apple-system, sans-serif;
   }
 }
 
@@ -89,7 +89,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: "Source Serif", "Georgia", serif;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
 article {
@@ -185,7 +185,7 @@ h1 {
 pre {
   background-color: var(--codeblock-bg) !important;
   color: var(--text) !important;
-  font-family: "Fira Code", "Roboto Mono", "Consolas", monospace !important;
+  font-family: ui-monospace, monospace !important;
   font-size: 0.85rem !important; // Reduced from 0.95rem for better balance
   line-height: 1.5 !important;
   padding: 2.5rem 1rem 1rem 1rem !important; // EXTRA TOP PADDING to clear header
