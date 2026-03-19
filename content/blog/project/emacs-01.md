@@ -45,9 +45,11 @@ As macros grew larger and more complicated, they needed variables, `if-else` con
 
 This is the birth of Emacs (Editor MACroS). An interpreter made the editor itself programmable, so users could extend and evolve it live without recompiling or waiting for upstream changes. In the earliest Emacs, the "interpreter" was just TECO's macro language. Later, GNU Emacs adopted **Emacs Lisp**. Lisp was a natural choice because its syntax is simple, its macros are powerful, and the interpreter is small and flexible, which makes live customization easy.
 
-Later, Lisp machines were a commercial failure, and **C on von Neumann architecture** dominated the industry. When Richard Stallman and the [Free Software Foundation](https://en.wikipedia.org/wiki/Free_Software_Foundation) wanted a free Emacs on Unix, there was no Lisp environment there. So he wrote a **Lisp virtual machine and interpreter core in C**, effectively reviving the spirit of Lisp machines in a Unix ecosystem, because it was the path of least resistance to a complete Unix toolchain.
+Later, Lisp machines were a commercial failure, and **C on von Neumann architecture** dominated the industry. When Richard Stallman and the [Free Software Foundation](https://en.wikipedia.org/wiki/Free_Software_Foundation) wanted a free Emacs on Unix, there was no Lisp environment there. At that time, [James Gosling](https://en.wikipedia.org/wiki/James_Gosling) wrote a **Lisp virtual machine and interpreter core in C**, called "Gosling Emacs". Richard Stallman took some of the code from Gosling Emacs and effectively reviving the spirit of Lisp machines in a Unix ecosystem, because it was the path of least resistance to a complete Unix toolchain.
 
 This helps explain why GNU Emacs' source code looks the way it does, and why jokes like "a great operating system" evolved.
+
+[James Gosling: Java, JVM, Emacs, and the Early Days of Computing | Lex Fridman Podcast](https://www.youtube.com/watch?v=IT__Nrr3PNI&t=3850s)
 
 ---
 

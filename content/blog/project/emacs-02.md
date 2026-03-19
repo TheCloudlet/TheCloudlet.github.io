@@ -13,6 +13,10 @@ math = true
 math_auto_render = true
 +++
 
+![8-bytes-many-meanings](/images/8-bytes-many-meanings.png)
+
+> Source: [Mohit Mishra](https://x.com/chessMan786/status/1872641579615465924)
+
 In the first part of this GNU Emacs series, I focused on the history and explains why there is a Lisp interpreter embedded inside a text editor. Before diving into this part, I recommend reading the previous post:
 
 [Emacs Internal #01: Emacs is a Lisp Runtime in C, Not an Editor](@/blog/project/emacs-01.md)
@@ -208,7 +212,7 @@ On architectures like x86, memory addressing supports `Base - Offset`. A C compi
 >
 > According to the paper [Evolution of Emacs Lisp](https://dl.acm.org/doi/epdf/10.1145/3386324), early Emacs used 7-bit MSB (Most Significant Bit) tags. The modern LSB tagging scheme, which elegantly exploits the 8-byte alignment of heap allocations, was actually pioneered and implemented by Stefan Monnier during the development of Emacs 22 in 2007.
 >
-> (Huge thanks to Reddit user *GuDzpoz* for the rigorous fact-checking and for pointing me to this paper!)
+> (Huge thanks to Reddit user _GuDzpoz_ for the rigorous fact-checking and for pointing me to this paper!)
 
 ### The Big Picture
 
