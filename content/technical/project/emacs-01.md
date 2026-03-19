@@ -3,6 +3,7 @@ title = "Emacs Internal #01: is a Lisp Runtime in C, Not an Editor"
 description = "Exploring why GNU Emacs embeds a Lisp interpreter in C -- from TECO marcos to Greenspun's Tenth Rule, with architecture comparisons to Neovim and VSCode"
 author = "Cloudet (Yi-Ping Pan)"
 date = 2026-02-26
+aliases = ["/blog/project/emacs-01/"]
 
 [taxonomies]
 categories = ["systems-programming"]

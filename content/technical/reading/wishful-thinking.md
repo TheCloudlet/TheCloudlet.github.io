@@ -3,6 +3,7 @@ title = "Wishful Thinking from SICP, Practically"
 description = "A practical exploration of SICP’s wishful thinking as a design principle for both programming and life—using abstraction, trust, and lazy evaluation to move forward without demanding complete certainty upfront."
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-02-04
+aliases = ["/blog/reading/wishful-thinking/"]
 
 [taxonomies]
 categories = ["software-architecture"]

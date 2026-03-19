@@ -3,6 +3,7 @@ title = "Emacs Internal #02: Data First — Deconstructing Lisp_Object in C"
 description = "From von Neumann architecture to C struct memory layouts: understanding the core data representation of Emacs Lisp."
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-03-05
+aliases = ["/blog/project/emacs-02/"]
 
 [taxonomies]
 categories = ["systems-programming"]

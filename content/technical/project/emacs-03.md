@@ -3,6 +3,7 @@ title = "Emacs Internal #03: Tagged Union, Tagged Pointer, and Poor Man's Inheri
 description = "Implementing dynamic typing in statically-typed systems: exploring Tagged Unions, Fat Pointers, Emacs's Tagged Pointers, and Struct Embedding."
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-03-12
+aliases = ["/blog/project/emacs-03/"]
 
 [taxonomies]
 categories = ["systems-programming"]
