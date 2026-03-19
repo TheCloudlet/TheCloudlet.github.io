@@ -1,5 +1,5 @@
 +++
-title = "Blog"
+title = "Murmur"
 sort_by = "date"
 paginate_by = 10
 +++

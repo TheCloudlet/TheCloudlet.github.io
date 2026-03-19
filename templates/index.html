@@ -1,13 +1,14 @@
-{% extends "base.html" %} {% block content %} {# Main content area - using
-standard Abridge layout #}
+{% extends "base.html" %} {% block content %}
 <div>
   <article>{{ section.content | safe }}</article>
 
   <hr />
   <h3>Latest Posts</h3>
 
-  {% set blog = get_section(path="blog/_index.md") %} {% for page in blog.pages
-  | slice(end=5) %}
+  {% set technical = get_section(path="technical/_index.md") %}
+  {% set murmur = get_section(path="murmur/_index.md") %}
+  {% set all_pages = technical.pages | concat(with=murmur.pages) | sort(attribute="date") | reverse %}
+  {% for page in all_pages | slice(end=5) %}
   <article>
     {{- macros::title_index(page=page, config=config) }} {%- if
     config.extra.meta_index.position %} {%- if config.extra.meta_index.position
@@ -30,7 +31,9 @@ standard Abridge layout #}
   {% endif %} {% endfor %}
 
   <div style="margin-top: 2rem; text-align: center">
-    <a class="b s120" href="{{ get_url(path='blog') }}">View All Posts →</a>
+    <a class="b s120" href="{{ get_url(path='technical') }}">Technical Posts →</a>
+    &nbsp;&nbsp;
+    <a class="b s120" href="{{ get_url(path='murmur') }}">Murmur →</a>
   </div>
 </div>
 

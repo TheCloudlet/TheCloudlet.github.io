@@ -45,8 +45,9 @@ toc = true
 google_analytics = "G-7FD091QMK9"
 
 menu = [
-    { name = "blog", url = "blog", slash = true },
-    { name = "tags", url = "tags", slash = true },
+    { name = "all-posts", url = "/", slash = false },
+    { name = "technical", url = "technical", slash = true },
+    { name = "murmur", url = "murmur", slash = true },
     { name = "about", url = "about", slash = true },
 ]
 
