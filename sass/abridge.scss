@@ -139,7 +139,7 @@
   /// These lines specify the fonts to add.
   $fontExt-Main: ("IBM Plex Sans", "Source Serif", Georgia, serif),
   // MAIN font(s) to add
-  $fontExt-Code: ("Fira Code", monospace),
+  $fontExt-Code: null,
   // CODE font(s) to add
   /// If relying on installed fonts alone, then the above is all you need, if the visiting system has the intended font installed then it will use it!
   /// However, if you want to load the Font File resource to ensure it is loaded if they do not have it, then use @use at the VERY Bottom of this file.
