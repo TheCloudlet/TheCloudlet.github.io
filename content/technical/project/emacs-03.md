@@ -243,7 +243,7 @@ When `Lisp_Object` carries the `Lisp_Vectorlike` tag, it points to a struct star
 This is how `vectorlike_header` is embedded:
 
 ```c
-// Source: lisp.h
+// Source: src/lisp.h
 struct Lisp_Vector // The generic "Base Data Structure"
 {
   union vectorlike_header header;

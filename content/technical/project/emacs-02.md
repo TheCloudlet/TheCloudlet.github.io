@@ -115,6 +115,7 @@ Because all heap-allocated objects are 8-byte aligned (due to `GCALIGNMENT`), th
 The tag is a enum, named `Lisp_Type`. And the simplified source code is as below:
 
 ```C
+// Source: src/lisp.h
 enum Lisp_Type
   {
     Lisp_Symbol = 0,       // 0b000
@@ -184,8 +185,7 @@ internally, `XSTRING`, `XCONS`, `XFIXNUM` and all other X macros work by masking
 For `XFIXNUM` the mask is 2 bits, so
 
 ```c
-// Source: src/lisp.h — XFIXNUM_RAW
-
+// Source: src/lisp.h
 return XLI(a) >> INTTYPEBITS;   // INTTYPEBITS = 2 for fixnums
 ```
 
@@ -194,7 +194,7 @@ PS. By performing a right shift (`>>`) on a signed integer, it forces the compil
 and for other types using `XUNTAG`:
 
 ```c
-// Source: src/lisp.h — XUNTAG (for pointer types: XCONS, XSTRING, XSYMBOL, ...)
+// Source: src/lisp.h
 #define XUNTAG(a, type, ctype) \
   ((ctype *) ((uintptr_t) XLP(a) - (uintptr_t) LISP_WORD_TAG(type)))
 
