@@ -61,7 +61,7 @@ If we pile up the abstractions of basic math operations with data abstractions:
 
 **From mathematical computation to a Von Neumann machine**, the computation can be lowered through IRs and eventually to assembly code.
 
-```asm
+```
 op rd, r1, r2
 ```
 
@@ -114,7 +114,7 @@ Because all heap-allocated objects are 8-byte aligned (due to `GCALIGNMENT`), th
 
 The tag is a enum, named `Lisp_Type`. And the simplified source code is as below:
 
-```C
+```c
 // Source: src/lisp.h
 enum Lisp_Type
   {

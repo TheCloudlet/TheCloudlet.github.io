@@ -200,7 +200,7 @@ Since GNU Emacs uses the lowest 3 bits for tags, it is strictly limited to 8 fun
 
 (Historical Note: As documented in the "Evolution of Emacs Lisp" paper, Emacs didn't always use the lowest 3 bits. In its early 32-bit days, it used a 7-bit tag located in the Most Significant Bits (MSB). It wasn't until Emacs 22 in 2007 that Stefan Monnier reworked the tagging scheme, moving the 3 tag bits to the Least Significant Bits (LSB) to better utilize the address space.)
 
-```text
+```
 McCarthy's Lisp (1960)          abstract math
   atom  eq  car  cdr
   cons  quote  cond

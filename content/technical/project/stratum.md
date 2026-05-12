@@ -141,7 +141,7 @@ When L1 misses, it asks L2. When L2 misses, it asks L3. When L3 misses, it asks 
 
 This is a **recursive process**—the same pattern SICP Chapter 1.2 describes as "deferred operations that build up." Each cache level is a function that either returns data or calls the next level.
 
-```scheme
+```lisp
 ; Cache lookup as recursive process (SICP perspective)
 ; This is pseudocode to illustrate the concept, not actual Stratum code
 (define (cache-lookup addr level)
