@@ -47,7 +47,6 @@
   --h7: #a5d6ff !important; // teal (escape)
   --h8: #79c0ff !important; // blue (tag/prop)
   --h9: #d2a8ff !important; // lavender (operator)
-  --ha: #161b22 !important; // highlight line
 }
 
 // Override Abridge Syntax Highlighting Colors to match GitHub Dark
@@ -201,6 +200,14 @@ pre {
     color: inherit !important;
     padding: 0;
     border: none;
+
+    // Fix highlight line styling for Zola/Abridge (hl_lines)
+    mark {
+      background-color: #161b22 !important;
+      filter: none !important;
+      display: block;
+      width: 100%;
+    }
   }
 }
 
