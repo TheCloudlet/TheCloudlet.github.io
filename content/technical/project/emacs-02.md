@@ -289,3 +289,4 @@ Emacs Internal Series:
 - #01: [Emacs is a Lisp Runtime in C, Not an Editor](@/technical/project/emacs-01.md)
 - #02: Data First — Deconstructing Lisp_Object in C
 - #03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/technical/project/emacs-03.md)
+- #04: [Interval Trees — Balancing by Text Length, Not Node Count](@/technical/project/emacs-04.md)

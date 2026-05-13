@@ -4,7 +4,7 @@ description = "Why Emacs balances its property tree by total character count ins
 author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-05-14
 aliases = ["/blog/project/emacs-04/"]
-draft = true
+draft = false
 
 [taxonomies]
 categories = ["systems-programming"]
@@ -63,7 +63,7 @@ This `INTERVAL` field points to a tree structure that maps metadata—such as fo
 
 My speculation is that, because Emacs Lisp evolved specifically to serve as the runtime for a text editor, separating the raw characters from their visual properties would create an unnecessary disconnect. If a `Lisp_String` is passed around through various functions, and the rendering metadata is stored in some external hash table or array, the system would constantly have to pay for keeping those two states synchronized.
 
-I guess the developers realized that enforcing strict boundaries between "data" and "presentation" here would just introduce friction. By embedding the `INTERVAL` tree directly inside the primitive string struct, the text and its formatting become a single, self-contained entity. It yields to the reality of text editing: abstract bytes aren't just passed around; physical text is moved that inherently remembers its own shape and color. At least, that's my reading of Emacs' design intent.
+I guess the developers realized that enforcing strict boundaries between "data" and "presentation" here would just introduce friction. By embedding the `INTERVAL` tree directly inside the primitive string struct, the text and its formatting become a single, self-contained entity. It yields to the reality of text editing: the system isn't just passing abstract bytes around; it is moving physical text that inherently remembers its own shape and color.
 
 ### 1.1 The Interval Struct
 
@@ -197,7 +197,7 @@ Interval 2: Length 5 - (Color G)
 Interval 3: Length 1 - (Color B) + (Weight Bold)
 ```
 
-Inserting a '&' into the green section only requires incrementing the length of Interval 2. The absolute positions of all subsequent intervals are implicitly shifted without any explicit updates to their nodes. This structural design amortizes to $O(\log W)$ updates (where $W$ is the total text length; §5 examines when this breaks down).
+Inserting a '&' into the green section only requires incrementing the length of Interval 2. The absolute positions of all subsequent intervals are implicitly shifted without any explicit updates to their nodes. This structural design amortizes to $O(\log W)$ updates (where $W$ is the total text length in characters, distinct from $N$ used later for node count; §5 examines when this breaks down).
 
 When I finally grasped this, it actually shifted my perspective a bit. Maintaining absolute coordinates is essentially an exhausting attempt to exert rigid, global control over a system. Every time a tiny, localized change happens, the system pays for updating the entire map just to maintain the appearance of absolute correctness.
 
@@ -541,7 +541,7 @@ Because `|new_diff| < |old_diff|` (`49 < 50`), the rotation actively improves th
 
 If Emacs' balancing heuristic is based purely on text length, does it have a flaw?
 
-Consider an extreme edge case: there is one massive property interval covering `[1, 1000)`, followed by a hundred tiny intervals like `[1000, 1001)`, `[1001, 1002)`, and so on to `[1998, 1999)`. Because the left side holds 1,000 characters and the right side holds 100 characters (distributed among 100 nodes), Emacs will see the text "weight" as relatively balanced and refuse to rotate. The tree will degenerate into a deeply skewed linked list on the right side!
+Consider an extreme edge case: there is one massive property interval covering `[1, 1000)`, followed by a hundred tiny intervals like `[1000, 1001)`, `[1001, 1002)`, and so on to `[1099, 1100)`. Because the left side holds 1,000 characters and the right side holds 100 characters (distributed among 100 nodes), Emacs will see the text "weight" as relatively balanced and refuse to rotate. The tree will degenerate into a deeply skewed linked list on the right side!
 
 I try to answer this question by reading some papers on related topics. Please correct me if I'm wrong.
 
