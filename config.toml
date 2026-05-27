@@ -14,11 +14,10 @@ taxonomies = [
 ]
 
 [markdown]
-highlight_code = true
-highlight_theme = "css" # Abridge uses CSS classes - overriding vars in extra.scss
-
-extra_syntaxes_and_themes = []
 render_emoji = false
+
+[markdown.highlighting]
+theme = "synthwave-84"
 external_links_target_blank = true
 external_links_no_follow = false
 external_links_no_referrer = false
