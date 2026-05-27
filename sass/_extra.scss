@@ -295,6 +295,88 @@ pre[data-lang]::before {
 }
 
 // =============================================================================
+// Post meta spacing
+// =============================================================================
+
+article > header + span,
+article > span {
+  display: block;
+  margin-bottom: 2rem;
+  margin-top: 0.25rem;
+  opacity: 0.75;
+  font-size: 0.85rem;
+}
+
+// =============================================================================
+// Timeline (homepage post list)
+// =============================================================================
+
+.timeline {
+  position: relative;
+  margin: 1.5rem 0;
+  padding-left: 7rem;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 5.5rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--c3);
+  }
+}
+
+.timeline-year {
+  position: relative;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  margin: 1.5rem 0 0.5rem -7rem;
+  padding-left: 0;
+}
+
+.timeline-item {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.timeline-date {
+  position: absolute;
+  left: -6.5rem;
+  font-size: 0.8rem;
+  opacity: 0.5;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -1.45rem;
+  top: 0.35em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--a1);
+  flex-shrink: 0;
+}
+
+.timeline-title {
+  font-size: 0.95rem;
+  text-decoration: none;
+  color: var(--a1);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// =============================================================================
 // Share & Related (unified inline prompt style)
 // =============================================================================
 .post-meta-line {

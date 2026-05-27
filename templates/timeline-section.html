@@ -1,18 +1,13 @@
 {% extends "base.html" %} {% block content %}
 <div>
-  <article>{{ section.content | safe }}</article>
+  <article>
+    <h1>{{ section.title }}</h1>
+    {% if section.content %}{{ section.content | safe }}{% endif %}
+  </article>
 
   <hr />
 
-  {% set technical = get_section(path="technical/_index.md") %}
-  {% set murmur = get_section(path="murmur/_index.md") %}
-
-  {% set all_pages = technical.pages
-    | concat(with=murmur.pages)
-    | filter(attribute="draft", value=false)
-    | sort(attribute="date")
-    | reverse
-  %}
+  {% set all_pages = section.pages | filter(attribute="draft", value=false) | sort(attribute="date") | reverse %}
 
   <div class="timeline">
     {% set grouped = all_pages | group_by(attribute="year") %}
@@ -28,5 +23,4 @@
     {% endfor %}
   </div>
 </div>
-
 {% endblock content %}

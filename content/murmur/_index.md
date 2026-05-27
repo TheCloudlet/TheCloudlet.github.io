@@ -1,5 +1,7 @@
 +++
 title = "Murmur"
 sort_by = "date"
-paginate_by = 10
+template = "timeline-section.html"
 +++
+
+Personal reflections and internals.

@@ -1,6 +1,8 @@
 +++
 title = "Technical"
 sort_by = "date"
-paginate_by = 10
-transparent = false
+transparent = true
+template = "timeline-section.html"
 +++
+
+Technical notes.
