@@ -17,15 +17,17 @@
       org-export-with-broken-links t
       ox-zola-base-dir (expand-file-name default-directory))
 
-(dolist (org (directory-files-recursively "content" "\\.org$"))
-  (with-current-buffer (find-file-noselect (expand-file-name org))
-    (if (save-excursion
-          (goto-char (point-min))
-          (re-search-forward "^#\\+ZOLA_DRAFT: true" nil t))
-        (message "  \033[1;33m[SKIP]\033[0m %s (draft)" org)
-      (condition-case e
-          (progn
-            (ox-zola-export-to-md)
-            (message "  \033[1;32m[OK]\033[0m  %s" org))
-        (error
-         (message "  \033[1;31m[ERR]\033[0m %s\n       %s" org e))))))
+(let ((include-drafts (getenv "ORG_EXPORT_DRAFTS")))
+  (dolist (org (directory-files-recursively "content" "\\.org$"))
+    (with-current-buffer (find-file-noselect (expand-file-name org))
+      (let ((is-draft (save-excursion
+                        (goto-char (point-min))
+                        (re-search-forward "^#\\+ZOLA_DRAFT: true" nil t))))
+        (if (and is-draft (not include-drafts))
+            (message "  \033[1;33m[SKIP]\033[0m %s (draft)" org)
+          (condition-case e
+              (progn
+                (ox-zola-export-to-md)
+                (message "  \033[1;32m[OK]\033[0m  %s%s" org (if is-draft " (draft)" "")))
+            (error
+             (message "  \033[1;31m[ERR]\033[0m %s\n       %s" org e))))))))

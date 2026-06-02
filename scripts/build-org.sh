@@ -2,15 +2,24 @@
 # build-org.sh: Lint org files, export to md, then validate md output.
 #
 # Usage:
-#   ./scripts/build-org.sh          # full pipeline
-#   ./scripts/build-org.sh --lint   # lint only
-#   ./scripts/build-org.sh --export # export only
-#   ./scripts/build-org.sh --check  # check md only
+#   ./scripts/build-org.sh           # full pipeline (skip drafts)
+#   ./scripts/build-org.sh --drafts  # full pipeline (include drafts)
+#   ./scripts/build-org.sh --lint    # lint only
+#   ./scripts/build-org.sh --export  # export only (skip drafts)
+#   ./scripts/build-org.sh --check   # check md only
 
 CONTENT_DIR="content"
 EMACS="${EMACS:-emacs}"
 fail=0
 lint_fail=0
+INCLUDE_DRAFTS=""
+
+# parse flags
+for arg in "$@"; do
+    case "$arg" in
+        --drafts) INCLUDE_DRAFTS=1 ;;
+    esac
+done
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -86,7 +95,7 @@ lint_org() {
 export_org() {
     log "Step 2: Exporting .org → .md"
 
-    "$EMACS" --batch --load scripts/org-export.el \
+    ORG_EXPORT_DRAFTS="$INCLUDE_DRAFTS" "$EMACS" --batch --load scripts/org-export.el \
         2>&1 | grep -v "^Loading\|^Wrote\|^org-babel\|\[ox-hugo\]\|\[ox-zola\]"
 }
 
