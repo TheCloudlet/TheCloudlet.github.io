@@ -33,30 +33,8 @@
   --codeblock-highlight: #161b22;
 }
 
-// Override Abridge Syntax Handling with higher specificity
-:root,
-:root:not(.switch),
-:root.switch {
-  --h0: #0d1117 !important; // background
-  --h1: #c9d1d9 !important; // base text
-  --h2: #8b949e !important; // comments
-  --h3: #ff7b72 !important; // red (keyword/function)
-  --h4: #ffa657 !important; // orange (const/var)
-  --h5: #d2a8ff !important; // purple (entity/function)
-  --h6: #7ee787 !important; // green (string)
-  --h7: #a5d6ff !important; // teal (escape)
-  --h8: #79c0ff !important; // blue (tag/prop)
-  --h9: #d2a8ff !important; // lavender (operator)
-}
-
-// Override Abridge Syntax Highlighting Colors to match GitHub Dark
-// Note: These variable names ($h0, $h1, etc.) must be overridden in abridge.scss BEFORE import
-// or we can try to override the CSS variables if Abridge uses them.
-// Abridge uses SCSS variables for generation.
-
-// Since `abridge.scss` imports this file at the END, we can only override CSS rules here,
-// not SCSS variables used in the main generation.
-// However, we can basic CSS overrides.
+// 2. Code Block Stylings
+// =============================================================================
 
 // Inline code styling
 :not(pre) > code {
@@ -182,8 +160,8 @@ h1 {
 
 // Code Blocks (Pre) Refinements
 pre {
-  background-color: var(--codeblock-bg) !important;
-  color: var(--text) !important;
+  background-color: #2e3440 !important; // Nord Polar Night background
+  color: #d8dee9 !important;          // Nord snow storm foreground
   font-family: var(--code-font) !important;
   font-size: 0.85rem !important; // Reduced from 0.95rem for better balance
   line-height: 1.5 !important;
@@ -197,7 +175,6 @@ pre {
     font-family: inherit;
     font-size: inherit;
     background-color: transparent !important;
-    color: inherit !important;
     padding: 0;
     border: none;
     white-space: pre !important; // Force preservation of all whitespace/newlines
@@ -211,7 +188,7 @@ pre {
 
     // Fix highlight line styling for Zola/Abridge (hl_lines)
     mark {
-      background-color: #161b22 !important;
+      background-color: rgba(255, 255, 255, 0.1) !important;
       filter: none !important;
       display: block;
       width: 100%;
