@@ -1,16 +1,13 @@
 +++
 title = "Introducing Coogle: Bringing Haskell's Hoogle to C++"
+author = ["Yi-Ping Pan (Cloudlet)"]
 description = "Building a type signature search engine for C++ inspired by Haskell's Hoogle—tackling libclang AST traversal, template canonicalization, and performance optimization"
-author = "Yi-Ping Pan (Cloudlet)"
 date = 2025-12-02
 aliases = ["/blog/project/coogle/"]
-
-[taxonomies]
-categories = ["software-tooling"]
-tags = ["ast-parsing", "libclang", "string-interning", "type-canonicalization"]
+draft = false
 +++
 
-## Why I Started This Project?
+## Why I Started This Project? {#why-i-started-this-project}
 
 The story started in 2024, when I decided to review basic algorithms and data structures. I started a repository called "[From Zero to Leetcode Hero](https://github.com/TheCloudlet/LeetcodeHero)." My intention was to learn and solve LeetCode problems using C++ and Haskell together.
 
@@ -25,10 +22,10 @@ add :: Int -> Int -> Int
 add = undefined
 ```
 
-- `add` is the function name.
-- `::` means "has type".
-- `Int -> Int -> Int` means it takes two `Int` arguments and returns an `Int`.
-- `add = undefined` means the implementation is still pending. We don't care about the body yet; the signature tells the whole story.
+-   `add` is the function name.
+-   `::` means "has type".
+-   `Int -> Int -> Int` means it takes two `Int` arguments and returns an `Int`.
+-   `add = undefined` means the implementation is still pending. We don't care about the body yet; the signature tells the whole story.
 
 The last type in the chain is the return type. So, a signature like `Int -> Char` means it takes an integer and returns a character.
 
@@ -61,7 +58,8 @@ std::string foo(const ASTNode& node);
 
 However, I couldn't find any similar tool for C/C++. That's why I created **Coogle** — a high-performance C++ command-line tool for searching C/C++ functions based on their type signatures, inspired by Hoogle from the Haskell ecosystem.
 
-## The Semantic Gap: Why Text Matching Fails C++ Code
+
+## The Semantic Gap: Why Text Matching Fails C++ Code {#the-semantic-gap-why-text-matching-fails-c-plus-plus-code}
 
 > Why not just use `grep` or `rg` to search for function names or patterns in header files?
 
@@ -69,17 +67,16 @@ That is the first question everyone asks. The answer is simple: C++ is not a reg
 
 Consider this scenario: You want a function that takes an `ASTNode` and returns a `std::string`.
 
-- **Regex approach**: Writing `std::string\s+\w+\(\s*const\s+ASTNode&\s*\w+\s*\)`
-- **The problem**: This will miss many valid matches:
+-   **Regex approach**: Writing `std::string\s+\w+\(\s*const\s+ASTNode&\s*\w+\s*\)`
+-   **The problem**: This will miss many valid matches:
+    ```c++
+    // The const is trailing
+    std::string getName(ASTNode const& node);
 
-  ```c++
-  // The const is trailing
-  std::string getName(ASTNode const& node);
-
-  // There is a line break
-  std::string
-  getName(const ASTNode& node);
-  ```
+    // There is a line break
+    std::string
+    getName(const ASTNode& node);
+    ```
 
 Sure, you might claim that you can write more complex regex to cover these cases. But do you really want to write that crazy regex, or would you rather use something like this?
 
@@ -100,32 +97,33 @@ Fair point! However, here's the thing: writing a Python script to manage complex
 
 Even with a script wrapping text-matching logic, you'll still run into two fundamental C++ features that trip up regex—but Coogle handles them naturally:
 
-1. **Type Aliases (The Semantic Gap)** — Regex sees text; Coogle sees types.
+1.  **Type Aliases (The Semantic Gap)** — Regex sees text; Coogle sees types.
+    -   Code: `using NodeID = uint64_t;`
+    -   Search: You want a function returning `uint64_t`.
+    -   Regex/Python: Will miss `NodeID get_id()` because `"NodeID" != "uint64_t"`.
+    -   Coogle: Understands the alias and finds the match.
 
-   - Code: `using NodeID = uint64_t;`
-   - Search: You want a function returning `uint64_t`.
-   - Regex/Python: Will miss `NodeID get_id()` because `"NodeID" != "uint64_t"`.
-   - Coogle: Understands the alias and finds the match.
-
-2. **Template Nesting (The "Greedy" Match Problem)** — Regex struggles with balanced brackets and recursive structures.
-   - Code: `std::map<std::string, std::vector<int>>`
-   - Regex: Writing a regex to correctly match nested `<...>` without accidentally matching the closing `>` of a different template is a nightmare (and theoretically impossible for standard regex engines).
-   - Coogle: Parses the AST structure correctly.
+2.  **Template Nesting (The "Greedy" Match Problem)** — Regex struggles with balanced brackets and recursive structures.
+    -   Code: `std::map<std::string, std::vector<int>>`
+    -   Regex: Writing a regex to correctly match nested `<...>` without accidentally matching the closing `>` of a different template is a nightmare (and theoretically impossible for standard regex engines).
+    -   Coogle: Parses the AST structure correctly.
 
 Therefore, if you want correctness and reliability, building a proper parser is the only way—and that is exactly what Coogle does.
 
-## Building Coogle
+
+## Building Coogle {#building-coogle}
 
 I'd like to thank Professor Ching-Han Chen (陳慶瀚) at National Central University, Taiwan, for teaching me the MIAT methodology. One of the most valuable lessons I learned was this: **the best way to start any project is to clearly define your inputs and outputs first.**
 
 So that's exactly where I began with Coogle.
 
-### Defining the Interface
+
+### Defining the Interface {#defining-the-interface}
 
 The tool needed to be simple and intuitive. I envisioned a command-line interface that takes two arguments:
 
-1. **File or directory path** — where to search
-2. **Type signature** — what to find
+1.  **File or directory path** — where to search
+2.  **Type signature** — what to find
 
 The output should tell me exactly where the matching functions are:
 
@@ -142,7 +140,7 @@ Simple enough. With the interface defined, I could now think about the internal 
 
 At the highest level, Coogle is just a function that transforms inputs into outputs:
 
-```
+```text
 ┌──────────────────────────────┐
 │           INPUT              │
 │  • C/C++ File Path           │
@@ -165,7 +163,7 @@ At the highest level, Coogle is just a function that transforms inputs into outp
 
 I sketched out how data would flow through Coogle. Following the functional programming principle that **everything is a function**, I broke down the entire system into a pipeline where each stage has clearly defined inputs and outputs:
 
-```
+```text
 ══════════════════════════════════════════════════════════
               Coogle Processing Pipeline
 ══════════════════════════════════════════════════════════
@@ -205,7 +203,8 @@ I sketched out how data would flow through Coogle. Following the functional prog
 
 This looked simple enough, and I thought this would be a one-week project. I was completely wrong. I jumped into several potholes and had to crawl my way out. Let me share the key challenges I faced.
 
-## Pothole 1: Understanding `libclang`
+
+## Pothole 1: Understanding `libclang` {#pothole-1-understanding-libclang}
 
 To be honest, I don't feel comfortable using tools or concepts that I don't understand well. My background is in Communication Engineering (Electrical Engineering), where we were trained in highly detailed mathematical modeling and derivation from first principles. We learned to question "black box" solutions and rigorously verify foundational theories before applying any abstraction—from Karnaugh maps to Gray codes, from probability theory to QPSK modulation.
 
@@ -240,16 +239,17 @@ CXChildVisitResult visitor(CXCursor Cursor, [[maybe_unused]] CXCursor Parent,
 
 After some research, I realized that Clang might not be so different from the RTL compiler I'm used to. At minimum, I needed to get a grasp of the high-level code structure and how data flows—that would comfort me a bit.
 
-**The full story of demystifying `libclang`—including the visitor pattern, AST traversal strategies, and how different languages handle compilation—deserves its own dedicated post.** For now, let's treat this as a black box with a well-defined interface: input a file, output an AST.
+**The full story of demystifying ~libclang~—including the visitor pattern, AST traversal strategies, and how different languages handle compilation—deserves its own dedicated post.** For now, let's treat this as a black box with a well-defined interface: input a file, output an AST.
 
 Stay tuned for: _"Inside libclang: From Visitor Pattern to AST Mastery"_
 
-## Pothole 2: The `std::string` and Template Matching Issue
+
+## Pothole 2: The `std::string` and Template Matching Issue {#pothole-2-the-std-string-and-template-matching-issue}
 
 At the beginning, I thought `std::string` was a real type. (Yes, this is how naive I was—despite working with professional C++ programmers and being tortured by `std::string` issues regularly, I didn't know this fundamental fact). So when I expected to find `std::string` but actually got `std::basic_string<...>`, I was very confused.
 
 I documented my learning journey in detail here:
-[Back to Basics: From C char to string_view (Notes from building Coogle)](@/technical/project/coogle.md)
+[Back to Basics: From C char to string_view (Notes from building Coogle)](@/technical/cpp/cpp_string.md)
 
 **The fix: Canonicalization (The Search for Truth)**
 
@@ -257,7 +257,8 @@ To solve this, I couldn't just store the function signature as it appears in the
 
 Clang provides `GetCanonicalType()`. This strips away all the "sugar"—typedefs, type aliases, and redundant qualifiers. This process mirrors the Lisp philosophy of Uniformity (Homogeneity). Just as Lisp treats code as data (S-expressions), canonicalization treats disparate C++ type aliases as a single, uniform data structure. By stripping away the syntactic sugar, we reveal the underlying mathematical truth of the function's type.
 
-## Pothole 3: The Translation Unit Trap (The Flood of Headers)
+
+## Pothole 3: The Translation Unit Trap (The Flood of Headers) {#pothole-3-the-translation-unit-trap--the-flood-of-headers}
 
 This was the funniest bug.
 
@@ -298,16 +299,18 @@ if (!FileNameStr || Ctx->CurrentFile != FileNameStr) {
 
 By combining **System Header Filtering** (Blacklist) with **Explicit File Matching** (Whitelist), I achieved zero noise. Coogle now respects the user's intent: "Search this file, and only this file."
 
-## Pothole 4: Performance Issue When Dealing With Large Codebases
+
+## Pothole 4: Performance Issue When Dealing With Large Codebases {#pothole-4-performance-issue-when-dealing-with-large-codebases}
 
 Running Coogle on a small "Hello World" project was instant. But when I unleashed it on a massive codebase like LLVM itself? It choked. It got stuck for over 40 minutes, eating up CPU cycles like there was no tomorrow.
 
 Profiling revealed two things:
 
-1. Too many things are being parsed
-2. `std::string` memory allocating issue
+1.  Too many things are being parsed
+2.  `std::string` memory allocating issue
 
-### Issue 1: The "Lazy Parser" Strategy
+
+### Issue 1: The "Lazy Parser" Strategy {#issue-1-the-lazy-parser-strategy}
 
 By default, Clang behaves like a compiler—it wants to build a perfect, complete AST. It resolves every `#include`, parses every template inside `<vector>`, and validates every function body.
 
@@ -354,7 +357,8 @@ unsigned Options = ... | CXTranslationUnit_Incomplete;
 
 **The Gain:** This tells Clang: "It's okay if you find missing symbols or headers. Don't error out; just give me what you have." This makes the parser resilient to my aggressive optimization strategy.
 
-### Issue 2: String Allocation Overhead (Memory Pool Optimization)
+
+### Issue 2: String Allocation Overhead (Memory Pool Optimization) {#issue-2-string-allocation-overhead--memory-pool-optimization}
 
 While fixing the parser flags solved the CPU bottleneck, I noticed the memory usage was still alarmingly high. This is where my previous deep dive into `std::string` and SSO (from Pothole 2) came back to save me.
 
@@ -373,9 +377,11 @@ For every matched signature, I needed at least 4 heap allocations (`void(void)`)
 
 To solve this, I implemented a String Interning mechanism backed by a linear memory arena:
 
-- **Storage**: A central `std::vector<char>` (or similar deque) acts as a persistent string pool.
-- **Reference**: Instead of holding `std::string` (which owns memory), my AST nodes now hold `std::string_view` (which borrows memory).
-- **Deduplication**: Before storing a type name, I check if it exists in the pool. If yes, I return a view to the existing data.
+-   **Storage**: A central `std::vector<char>` (or similar deque) acts as a persistent string pool.
+-   **Reference**: Instead of holding `std::string` (which owns memory), my AST nodes now hold `std::string_view` (which borrows memory).
+-   **Deduplication**: Before storing a type name, I check if it exists in the pool. If yes, I return a view to the existing data.
+
+<!--listend-->
 
 ```C++
 struct Signature {
@@ -394,31 +400,33 @@ Initially, I considered caching all `int` strings in a hash table to avoid dupli
 
 In the end, I successfully reduced the whole AST parsing time for LLVM from being completely stuck (40+ minutes) down to just 6 minutes. While still not blazing fast, it's at least workable. If we want it even faster, we could integrate `compile_commands.json` or customize JSON file dumps, so we parse once and can check different signatures in split seconds.
 
-## Conclusion (The Takeaway)
+
+## Conclusion (The Takeaway) {#conclusion--the-takeaway}
 
 Building Coogle wasn't just about making a search tool—it was a journey of demystifying compilers and embracing the power of **Plumbing vs. Logic** separation.
 
-I started with fear: fear of `libclang`, fear of the "black box," fear of diving into unfamiliar territory. But by applying the principles I learned from both SICP and practical engineering—**Data Abstraction** (separating interface from implementation), **Canonicalization** (normalizing types to their single source of truth), and **Lazy Evaluation** (only parsing what we need)—I managed to tame the beast.
+I started with fear: fear of `libclang`, fear of the "black box," fear of diving into unfamiliar territory. But by applying the principles I learned from both SICP and practical engineering—\*Data Abstraction\* (separating interface from implementation), **Canonicalization** (normalizing types to their single source of truth), and **Lazy Evaluation** (only parsing what we need)—I managed to tame the beast.
 
 The four potholes I encountered taught me valuable lessons:
 
-1. **Understanding `libclang`** — Sometimes you don't need to understand everything; treating components as black boxes with clear interfaces is okay.
-2. **Template Matching** — `std::string` isn't what I thought it was, and understanding the underlying type system is crucial.
-3. **Translation Unit Filtering** — Defense in depth with layered filtering (system headers + file provenance) achieves zero noise.
-4. **Performance Optimization** — Aggressive optimization strategies (lazy parsing + memory pools) can reduce 40+ minutes to 6 minutes.
+1.  **Understanding `libclang`** — Sometimes you don't need to understand everything; treating components as black boxes with clear interfaces is okay.
+2.  **Template Matching** — `std::string` isn't what I thought it was, and understanding the underlying type system is crucial.
+3.  **Translation Unit Filtering** — Defense in depth with layered filtering (system headers + file provenance) achieves zero noise.
+4.  **Performance Optimization** — Aggressive optimization strategies (lazy parsing + memory pools) can reduce 40+ minutes to 6 minutes.
 
 Now, Coogle serves as my daily driver for navigating complex C++ codebases. It's not perfect, but it's built on a solid understanding of how C++ compilers actually work under the hood.
 
 **What's Next?**
 
-- Integrate `compile_commands.json` for persistent AST caching
-- Consider building a language server protocol (LSP) extension
+-   Integrate `compile_commands.json` for persistent AST caching
+-   Consider building a language server protocol (LSP) extension
 
 If you're interested in trying Coogle, check out the repository: [github.com/TheCloudlet/Coogle](https://github.com/TheCloudlet/Coogle)
 
-## Appendix: Architecture Diagram
 
-```
+## Appendix: Architecture Diagram {#appendix-architecture-diagram}
+
+```text
 +---------------------+       +----------------------+
 |   C/C++ Source      |       |   User Query         |
 |   (File / Project)  |       |   "int(int)"         |

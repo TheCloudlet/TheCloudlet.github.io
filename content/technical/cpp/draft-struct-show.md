@@ -1,34 +1,29 @@
 +++
 title = "fixme"
+author = ["Yi-Ping Pan (Cloudlet)"]
 description = "fixme"
-author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-01-30
 draft = true
-
-[taxonomies]
-categories = ["systems-programming"]
-tags = ["data-serialization", "debugging", "string-formatting"]
 +++
 
-## Structure thinking
+## Structure thinking {#structure-thinking}
 
-- Intro, why, coverity (CL: 6463213)
+-   Intro, why, coverity (CL: 6463213)
+    -   Expalin: Handling mutiple types int, long, char\* printing when debugging
+        std::swtringstream ss;; return string
 
-  - Expalin: Handling mutiple types int, long, char\* printing when debugging
-    std::swtringstream ss;; return string
+-   What I did?
+    -   Lambda function (3 kinds)
+    -   result - no more `ss << "\txxx - " << value` and weird if else checking string null
 
-- What I did?
+-   It is just like Haskell / Lisp show ...
+    so maybe we should use the same way in cpp, when defining a struct, think how to print it.
 
-  - Lambda function (3 kinds)
-  - result - no more `ss << "\txxx - " << value` and weird if else checking string null
+-   how does &lt;&lt; handles print value?
+    need to google? if every struct or data has good toString(), printing will be super easy.
 
-- It is just like Haskell / Lisp show ...
-  so maybe we should use the same way in cpp, when defining a struct, think how to print it.
 
-- how does << handles print value?
-  need to google? if every struct or data has good toString(), printing will be super easy.
-
-## Code
+## Code {#code}
 
 ```cpp
 struct my_struct {
@@ -75,15 +70,17 @@ std::string debugStruct(struct my_struct* ps) {
 }
 ```
 
-## Thinking about the writing flow
 
-1. Tell the story and show the code
-2. Give ppl minutes to think what might be weird to me
-3. Pinpoint out the weird parts
-   - stringstream
-   - not having a correct way to output a struct (Haskell, Ractect)
-4. what are the possible solution and what I chose
+## Thinking about the writing flow {#thinking-about-the-writing-flow}
+
+1.  Tell the story and show the code
+2.  Give ppl minutes to think what might be weird to me
+3.  Pinpoint out the weird parts
+    -   stringstream
+    -   not having a correct way to output a struct (Haskell, Ractect)
+4.  what are the possible solution and what I chose
 
 ---
 
-## It all started from a fixing a static analysis issue
+
+## It all started from a fixing a static analysis issue {#it-all-started-from-a-fixing-a-static-analysis-issue}

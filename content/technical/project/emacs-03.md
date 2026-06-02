@@ -1,17 +1,10 @@
 +++
 title = "Emacs Internal #03: Tagged Union, Tagged Pointer, and Poor Man's Inheritance"
+author = ["Yi-Ping Pan (Cloudlet)"]
 description = "Implementing dynamic typing in statically-typed systems: exploring Tagged Unions, Fat Pointers, Emacs's Tagged Pointers, and Struct Embedding."
-author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-03-12
 aliases = ["/blog/project/emacs-03/"]
-
-[taxonomies]
-categories = ["systems-programming"]
-tags = ["tagged-pointer", "fat-pointer", "custom-rtti", "struct-embedding"]
-
-[extra]
-math = true
-math_auto_render = true
+draft = false
 +++
 
 > **[Update 2026-03-17]**
@@ -22,13 +15,15 @@ math_auto_render = true
 >
 > Furthermore, thanks to the rigorous peer review by the Lobsters community (specifically _kana_). I highly recommend checking out the _Evolution of Emacs Lisp_ paper for a deeper historical dive.
 
-## Recap
+
+## Recap {#recap}
 
 From the [previous article](@/technical/project/emacs-02.md), we examined how GNU Emacs represents every Lisp value — integers, symbols, cons cells, strings, buffers — inside a single 64-bit slot called `Lisp_Object`. Because all heap objects are 8-byte aligned and the lowest 3 bits of any valid pointer are always zero, Emacs reclaims these "free" bits and uses them as a type tag.
 
 The more fundamental question is: **when a single variable must hold values of different types at runtime, how do we preserve enough information to use that data correctly?**
 
-## 01. Back to the basics: how to write a polymorphic type
+
+## 01. Back to the basics: how to write a polymorphic type {#01-dot-back-to-the-basics-how-to-write-a-polymorphic-type}
 
 **The static typing**
 
@@ -117,7 +112,8 @@ void visit(struct TaggedValue* v, struct Visitor* visitor) {
 
 Now you have invented C++ `std::variant` and `std::visit` that were introduced in C++17, which utilize a "tagged union."
 
-## 02. Tagged Union (Unboxed): `std::variant` and `std::visit`
+
+## 02. Tagged Union (Unboxed): `std::variant` and `std::visit` {#02-dot-tagged-union--unboxed--std-variant-and-std-visit}
 
 People claim `std::variant` and `std::visit` provide a more "**TYPE SAFE**" way, but in fact they just provide some checks. It simply ensures that an invalid cast like `(TypeA*) type_b_object` is caught either at compile time (if the type is not in the variant at all) or at runtime (if the active type does not match), rather than silently producing undefined behavior as the hand-written version would.
 
@@ -143,22 +139,23 @@ Second, this way of handling data and types is called a "**tagged union**", or "
 
 The naming of boxed and unboxed is a programming language (PL) term that looks very weird to C/C++ programmers. The "unboxed" way looks actually wrapped in a `struct` box. But the actual meaning in PL theory refers to **memory indirection**.
 
-- **Boxed**: The data lives on the heap (inside a "box"). You only hold a reference or pointer to it.
-- **Unboxed**: The raw bits of the data are laid out flat right where they are declared (on the stack, or inline within an array). There are no pointers to follow. `std::variant` is unboxed because all the bytes required for the largest possible variant are allocated inline right there.
+-   **Boxed**: The data lives on the heap (inside a "box"). You only hold a reference or pointer to it.
+-   **Unboxed**: The raw bits of the data are laid out flat right where they are declared (on the stack, or inline within an array). There are no pointers to follow. `std::variant` is unboxed because all the bytes required for the largest possible variant are allocated inline right there.
 
-![boxed-vs-unboxed](/images/boxed-vs-unboxed.png)
+[Boxed vs unboxed memory layout](/images/boxed-vs-unboxed.png)
 
 References on memory representation:
 
-- [Simon Marlow - Faster Laziness Using Dynamic Pointer Tagging](https://simonmar.github.io/bib/papers/ptr-tagging.pdf)
-- [Jane Street - OCaml unboxed types talk](https://www.janestreet.com/tech-talks/unboxed-types-for-ocaml/)
-- [GHC Commentary](https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/rts/storage/heap-objects)
+-   [Simon Marlow - Faster Laziness Using Dynamic Pointer Tagging](https://simonmar.github.io/bib/papers/ptr-tagging.pdf)
+-   [Jane Street - OCaml unboxed types talk](https://www.janestreet.com/tech-talks/unboxed-types-for-ocaml/)
+-   [GHC Commentary](https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/rts/storage/heap-objects)
 
-## 03. Tagged Pointer (Boxed)
+
+## 03. Tagged Pointer (Boxed) {#03-dot-tagged-pointer--boxed}
 
 A tagged union allocates the maximum required size for every variant. If an Abstract Syntax Tree (AST) contains an integer node requiring 8 bytes and a function definition node requiring 256 bytes, an unboxed tagged union allocates 256 bytes for every integer node. This affects the overall memory footprint and cache usage.
 
-An alternative approach keeps data on the heap (boxed) and uses the lowest 3 bits of the 8-byte aligned pointer as the type tag. This provides $2^3 = 8$ possible types without allocating additional inline bytes. This is called a **tagged pointer**.
+An alternative approach keeps data on the heap (boxed) and uses the lowest 3 bits of the 8-byte aligned pointer as the type tag. This provides \\(2^3 = 8\\) possible types without allocating additional inline bytes. This is called a **tagged pointer**.
 
 ```c
 struct tagged_pointer {
@@ -185,22 +182,23 @@ struct fat_pointer {
 
 Comparing fat pointers to tagged pointers: A fat pointer is smaller than a tagged union, but it doubles the memory size compared to a 64-bit tagged pointer. This changes the memory footprint and the Garbage Collector (GC) scanning workload. Emacs was designed to keep the `Lisp_Object` within a single 64-bit word.
 
-## 04. Emacs: Tagged Pointer + Poor Man's Inheritance
+
+## 04. Emacs: Tagged Pointer + Poor Man's Inheritance {#04-dot-emacs-tagged-pointer-plus-poor-man-s-inheritance}
 
 Since GNU Emacs uses the lowest 3 bits for tags, it is strictly limited to 8 fundamental types. If you look at `enum Lisp_Type` in `src/lisp.h`, you'll see exactly that:
 
-1. `Lisp_Symbol`
-2. `Lisp_Int0`
-3. `Lisp_Int1`
-4. `Lisp_String`
-5. `Lisp_Vectorlike`
-6. `Lisp_Cons`
-7. `Lisp_Float`
-   _(plus one unused type)_
+1.  `Lisp_Symbol`
+2.  `Lisp_Int0`
+3.  `Lisp_Int1`
+4.  `Lisp_String`
+5.  `Lisp_Vectorlike`
+6.  `Lisp_Cons`
+7.  `Lisp_Float`
+    _(plus one unused type)_
 
 (Historical Note: As documented in the "Evolution of Emacs Lisp" paper, Emacs didn't always use the lowest 3 bits. In its early 32-bit days, it used a 7-bit tag located in the Most Significant Bits (MSB). It wasn't until Emacs 22 in 2007 that Stefan Monnier reworked the tagging scheme, moving the 3 tag bits to the Least Significant Bits (LSB) to better utilize the address space.)
 
-```
+```text
 McCarthy's Lisp (1960)          abstract math
   atom  eq  car  cdr
   cons  quote  cond
@@ -261,8 +259,8 @@ struct Lisp_Symbol_With_Pos
 
 When Emacs identifies a `Lisp_Object`, it performs two checks:
 
-1. **Primary Tag Check**: Check if the lowest 3 bits are `Lisp_Vectorlike` (`0b101`).
-2. **Sub-Tag Check**: Cast the pointer to `union vectorlike_header*`, read the `TYPE` field. If it equals `PVEC_SYMBOL_WITH_POS`, cast the pointer to `struct Lisp_Symbol_With_Pos*`.
+1.  **Primary Tag Check**: Check if the lowest 3 bits are `Lisp_Vectorlike` (`0b101`).
+2.  **Sub-Tag Check**: Cast the pointer to `union vectorlike_header*`, read the `TYPE` field. If it equals `PVEC_SYMBOL_WITH_POS`, cast the pointer to `struct Lisp_Symbol_With_Pos*`.
 
 The definition of `union vectorlike_header` packs the subtype into its `size` field:
 
@@ -361,7 +359,8 @@ To safely implement tagged pointers in C/C++, one must cast the pointer to `uint
 
 Unlike C++, **Rust** has recently stabilized its **Strict Provenance API** to tackle this exact problem. Instead of risking UB, Rust provides methods like `ptr::map_addr`, which allows developers to safely map a pointer to an integer, manipulate the tag bits, and map it back without confusing LLVM's aliasing model. It offers a standardized way to hide flags in pointers while playing nicely with the compiler's strict rules. (Thanks to HN user _shadowgovt_, _tialaramex_, _VorpalWay_)
 
-## 05. The Modern Reincarnation: LLVM's Custom RTTI
+
+## 05. The Modern Reincarnation: LLVM's Custom RTTI {#05-dot-the-modern-reincarnation-llvm-s-custom-rtti}
 
 The most fascinating part about reading Emacs's source code is discovering that these techniques are still highly applicable and relevant even in the modern C++ era. The combination of **Tagged Pointer** + **Poor Man's Inheritance** is no exception.
 
@@ -411,33 +410,36 @@ if (isa<Argument>(Val)) {
 
 Both Emacs and LLVM handle dynamic dispatch over a hierarchy of types by embedding tag information directly in the base structures and performing integer comparisons before casting.
 
-> **Community Updates & Further Reading**
+> **Community Updates &amp; Further Reading**
 >
-> - **On CRTP & Static Polymorphism:** Huge thanks to [Nick Desaulniers](https://nickdesaulniers.github.io/) for highlighting LLVM's elegant use of CRTP. For deeper dives into devirtualization, I highly recommend the [Wikipedia CRTP page](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern) and David Alvarez Rosa's excellent post on [Devirtualization and Static Polymorphism](https://david.alvarezrosa.com/posts/devirtualization-and-static-polymorphism/).
-> - **On LLVM Internals:** While the `classof` pattern has been the backbone of LLVM's Custom RTTI for years, LLVM is continuously evolving its architecture. Recently, it introduced the [`CastInfo` trait](https://llvm.org/doxygen/structllvm_1_1CastInfo.html), which decouples the casting mechanism from class definitions and relies more heavily on template specialization. _(Thanks to HN user mshockwave for this architectural update)._
+> -   **On CRTP &amp; Static Polymorphism:** Huge thanks to [Nick Desaulniers](https://nickdesaulniers.github.io/) for highlighting LLVM's elegant use of CRTP. For deeper dives into devirtualization, I highly recommend the [Wikipedia CRTP page](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern) and David Alvarez Rosa's excellent post on [Devirtualization and Static Polymorphism](https://david.alvarezrosa.com/posts/devirtualization-and-static-polymorphism/).
+> -   **On LLVM Internals:** While the `classof` pattern has been the backbone of LLVM's Custom RTTI for years, LLVM is continuously evolving its architecture. Recently, it introduced the [`CastInfo` trait](https://llvm.org/doxygen/structllvm_1_1CastInfo.html), which decouples the casting mechanism from class definitions and relies more heavily on template specialization. _(Thanks to HN user mshockwave for this architectural update)._
 
-## 06. Other Tagged Pointer Usages
+
+## 06. Other Tagged Pointer Usages {#06-dot-other-tagged-pointer-usages}
 
 The pattern of storing information in unused bits of pointers or headers is found in other system implementations:
 
-- **Linux Kernel Red-Black Trees**: Uses the lowest bits of parent pointers to store the node color.
-- **LuaJIT (NaN Boxing)**: Uses the payload space of IEEE 754 "Not-a-Number" `double`s to encode pointers.
-- **PostgreSQL**: Encodes transaction visibility metadata in the bit-fields of tuple headers.
-- **LLVM `PointerIntPair<>`**: A C++ template utility for packing integers into pointer alignment padding.
-- **ARM64 Top Byte Ignore (TBI)**: Hardware configuration that allows the top 8 bits of a 64-bit pointer to be used for tags (utilized in iOS/macOS).
-- [Faster Laziness Using Dynamic Pointer Tagging (Simon Marlow et al.)](https://simonmar.github.io/bib/papers/ptr-tagging.pdf) (thanks to HN user _internet_points_ for the reference)
+-   **Linux Kernel Red-Black Trees**: Uses the lowest bits of parent pointers to store the node color.
+-   **LuaJIT (NaN Boxing)**: Uses the payload space of IEEE 754 "Not-a-Number" ~double~s to encode pointers.
+-   **PostgreSQL**: Encodes transaction visibility metadata in the bit-fields of tuple headers.
+-   **LLVM `PointerIntPair<>`**: A C++ template utility for packing integers into pointer alignment padding.
+-   **ARM64 Top Byte Ignore (TBI)**: Hardware configuration that allows the top 8 bits of a 64-bit pointer to be used for tags (utilized in iOS/macOS).
+-   [Faster Laziness Using Dynamic Pointer Tagging (Simon Marlow et al.)](https://simonmar.github.io/bib/papers/ptr-tagging.pdf) (thanks to HN user _internet_points_ for the reference)
 
-## Conclusion
+
+## Conclusion {#conclusion}
 
 This article outlines three ways memory is structured to handle dynamic typing:
 
-- **Tagged Union (Unboxed)**: Allocates inline memory based on the largest variant. (`std::variant`)
-- **Fat Pointer**: Allocates additional bytes alongside the pointer to store type information. (Go interfaces, Rust traits)
-- **Tagged Pointer (Boxed)**: Uses the alignment padding of pointers to store tags, relying on heap allocation for the data. (Emacs `Lisp_Object`, V8)
+-   **Tagged Union (Unboxed)**: Allocates inline memory based on the largest variant. (`std::variant`)
+-   **Fat Pointer**: Allocates additional bytes alongside the pointer to store type information. (Go interfaces, Rust traits)
+-   **Tagged Pointer (Boxed)**: Uses the alignment padding of pointers to store tags, relying on heap allocation for the data. (Emacs `Lisp_Object`, V8)
 
 Different memory layouts serve different requirements. Emacs and LLVM utilize Tagged Pointers and struct embedding to manage dynamic typing within their specific memory constraints.
 
-## Next step
+
+## Next step {#next-step}
 
 Looking into the weird `Lisp_String` object... there is an interval tree in it.
 
@@ -445,7 +447,7 @@ Looking into the weird `Lisp_String` object... there is an interval tree in it.
 
 Emacs Internal Series:
 
-- #01: [Emacs is a Lisp Runtime in C, Not an Editor](@/technical/project/emacs-01.md)
-- #02: [Data First — Deconstructing Lisp_Object in C](@/technical/project/emacs-02.md)
-- #03: Tagged Union, Tagged Pointer, and Poor Man's Inheritance
-- #04: [Interval Trees — Balancing by Text Length, Not Node Count](@/technical/project/emacs-04.md)
+-   \#01: [Emacs is a Lisp Runtime in C, Not an Editor](@/technical/project/emacs-01.md)
+-   \#02: [Data First — Deconstructing Lisp_Object in C](@/technical/project/emacs-02.md)
+-   \#03: Tagged Union, Tagged Pointer, and Poor Man's Inheritance
+-   \#04: [Interval Trees — Balancing by Text Length, Not Node Count](@/technical/project/emacs-04.md)

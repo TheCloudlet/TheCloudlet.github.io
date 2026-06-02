@@ -1,20 +1,13 @@
 +++
 title = "Emacs Internal #02: Data First — Deconstructing Lisp_Object in C"
+author = ["Yi-Ping Pan (Cloudlet)"]
 description = "From von Neumann architecture to C struct memory layouts: understanding the core data representation of Emacs Lisp."
-author = "Yi-Ping Pan (Cloudlet)"
 date = 2026-03-05
 aliases = ["/blog/project/emacs-02/"]
-
-[taxonomies]
-categories = ["systems-programming"]
-tags = ["lisp-object", "memory-layout", "c-macros", "tagged-pointer"]
-
-[extra]
-math = true
-math_auto_render = true
+draft = false
 +++
 
-![8-bytes-many-meanings](/images/8-bytes-many-meanings.png)
+[8 bytes many meanings](/images/8-bytes-many-meanings.png)
 
 > Source: [Mohit Mishra](https://x.com/chessMan786/status/1872641579615465924)
 
@@ -24,15 +17,17 @@ In the first part of this GNU Emacs series, I focused on the history and explain
 
 In this post, I want to look at GNU Emacs from a higher system-design perspective.
 
-## The Mathematical Foundation: McCarthy's Lisp
+
+## The Mathematical Foundation: McCarthy's Lisp {#the-mathematical-foundation-mccarthy-s-lisp}
 
 Before diving into the source code, I left a short reference on Lisp here. Feel free to skip it if you are familiar with its background.
 
-- [Wiki - Lisp](<https://en.wikipedia.org/wiki/Lisp_(programming_language)>) (LISt Processing)
-- [The Roots of Lisp](https://languagelog.ldc.upenn.edu/myl/llog/jmc.pdf) - Paul Graham
-- [How Lisp Became God's Own Programming Language](https://twobithistory.org/2018/10/14/lisp.html) - Two-Bit history
+-   [Wiki - Lisp](https://en.wikipedia.org/wiki/Lisp_(programming_language)) (LISt Processing)
+-   [The Roots of Lisp](https://languagelog.ldc.upenn.edu/myl/llog/jmc.pdf) - Paul Graham
+-   [How Lisp Became God's Own Programming Language](https://twobithistory.org/2018/10/14/lisp.html) - Two-Bit history
 
-## First Principle: Data and Operations
+
+## First Principle: Data and Operations {#first-principle-data-and-operations}
 
 This is how I personally approach reading source code: I start from how general computation works.
 
@@ -42,26 +37,26 @@ Starting with the very basic, `3 + 4 = 7`. The data is `3` and `4`. The operatio
 
 If we pile up the abstractions of basic math operations with data abstractions:
 
-- **Complex numbers**:
-  $$
-  (a + bi)(c + di) = (ac - bd) + (ad + bc)i
-  $$
-- **Matrix multiplication**:
-  $$
-  C_{ij} = \sum_{k=1}^{n} A_{ik} B_{kj}
-  $$
-- **Convolution**:
-  $$
-  (f * g)(t) = \int_{-\infty}^{\infty} f(\tau)g(t - \tau)\, d\tau
-  $$
-- **A step function**:
-  $$
-  H(x) = \begin{cases} 1 & \text{if } x \ge 0 \\ 0 & \text{if } x < 0 \end{cases}
-  $$
+-   **Complex numbers**:
+    \\[
+      (a + bi)(c + di) = (ac - bd) + (ad + bc)i
+      \\]
+-   **Matrix multiplication**:
+    \\[
+      C\_{ij} = \sum\_{k=1}^{n} A\_{ik} B\_{kj}
+      \\]
+-   **Convolution**:
+    \\[
+      (f \* g)(t) = \int\_{-\infty}^{\infty} f(\tau)g(t - \tau)\\, d\tau
+      \\]
+-   **A step function**:
+    \\[
+      H(x) = \begin{cases} 1 & \text{if } x \ge 0 \\\ 0 & \text{if } x < 0 \end{cases}
+      \\]
 
 **From mathematical computation to a Von Neumann machine**, the computation can be lowered through IRs and eventually to assembly code.
 
-```
+```text
 op rd, r1, r2
 ```
 
@@ -69,8 +64,8 @@ When I think about compilers here, I usually picture SSA form at this stage.
 
 At this level, the model is brutally clean:
 
-- **Data** is a sequence of bits in the memory hierarchy, waiting to be fetched into a register.
-- **Operations** are high-level semantics that the compiler lowers — pass by pass, IR by IR — until they become the native instruction set the silicon actually understands.
+-   **Data** is a sequence of bits in the memory hierarchy, waiting to be fetched into a register.
+-   **Operations** are high-level semantics that the compiler lowers — pass by pass, IR by IR — until they become the native instruction set the silicon actually understands.
 
 This leads me to three things:
 
@@ -86,13 +81,15 @@ Second, the idea that **code is data, and data is code** keeps showing up for me
 >
 > — _u/authurno1_ on Reddit
 
-Third, when I read code, I tend to start from the data: in C/C++ terms, the `struct` or private members of a class. Data is often more self-descriptive than operations. Once I understand the data model, the operations become transformations over that model. This is a personal bias, but it matches how I think about functional programming (FP) and data-oriented programming (DOP). It also explains why OOP doesn’t click with me as easily: it starts from behavior and encapsulation, while I prefer to anchor my understanding in data first. From this lens I could talk about side effects, mutability, and other concepts, but that would take us too far.
+Third, when I read code, I tend to start from the data: in C/C++ terms, the `struct` or private members of a class. Data is often more self-descriptive than operations. Once I understand the data model, the operations become transformations over that model. This is a personal bias, but it matches how I think about functional programming (FP) and data-oriented programming (DOP). It also explains why OOP doesn't click with me as easily: it starts from behavior and encapsulation, while I prefer to anchor my understanding in data first. From this lens I could talk about side effects, mutability, and other concepts, but that would take us too far.
 
 Starting with the data...
 
-## Lisp_Object: The Universal C Type
 
-### Tagged Pointer Layout
+## Lisp_Object: The Universal C Type {#lisp-object-the-universal-c-type}
+
+
+### Tagged Pointer Layout {#tagged-pointer-layout}
 
 Back to the GNU Emacs [source code](https://github.com/emacs-mirror/emacs), the core data type used to represent Elisp values in C is called `Lisp_Object`, defined in `src/lisp.h`.
 
@@ -100,7 +97,7 @@ For simplicity, using a 64-bit system to explain.
 
 Lisp_Object is a 64-bit machine word. For pointers, because heap allocations are 8-byte aligned, their lowest 3 bits are guaranteed to be `000`. Emacs simply embeds the 3-bit type tag directly into these "free" zero bits. For immediate integers (fixnums), the upper 62 bits hold the actual value.
 
-```
+```text
 64-bit Lisp_Object:
 ┌────────────────────────────────────────────────┬─────┐
 │        pointer or value (61 bits)              │ tag │
@@ -131,11 +128,12 @@ enum Lisp_Type
 
 PS. This tagged pointer technique is actually a universal pattern across systems programming. It solves two problems: First, in dynamically typed contexts, the execution engine must know a value's type before operating on it. Second, placing this metadata in an extra struct field wastes memory and causes cache-misses from pointer chasing. To survive memory bus bottlenecks, engineers cram metadata directly into the unused bits of pointers. We'll discuss in the next post.
 
-### Stealing One More Bit
+
+### Stealing One More Bit {#stealing-one-more-bit}
 
 Looking closely to the `Lisp_Int0` and `Lisp_Int1`, something looks weird...
 
-```
+```text
 Lisp_Int0 = 0b010
 Lisp_Int1 = 0b110
                ^^
@@ -144,7 +142,7 @@ lowest 2 bits are the same!
 
 This design actually doubled the value that can be represented by a `Lisp_Int`
 
-```
+```text
 Normal 3-bit tag:
 ┌─────────────────────────────────────────────────────┬─────┐
 │ value (61 bits)                                     │ tag │
@@ -162,13 +160,14 @@ Range: -2^61 to 2^61-1 (doubled!)
 
 One important distinction: for a fixnum, the upper bits hold the integer value directly (an _immediate_). For all other types, those bits are a heap pointer to the underlying C struct.
 
-### The Operation Conventions
+
+### The Operation Conventions {#the-operation-conventions}
 
 The macros (or in debug mode is inline function) that work on `Lisp_Object` follow a naming convention:
 
-- **`X` prefix** — _eXtract_: strip the tag bits and get the underlying value or pointer
-- **`P` suffix** — _Predicate_: check the type, returns bool
-- **`CHECK_` prefix** — _Assert_: like a predicate, but signals a Lisp error if the type is wrong
+-   **`X` prefix** — _eXtract_: strip the tag bits and get the underlying value or pointer
+-   **`P` suffix** — _Predicate_: check the type, returns bool
+-   **`CHECK_` prefix** — _Assert_: like a predicate, but signals a Lisp error if the type is wrong
 
 For example, to check if an object is an integer and then read it:
 
@@ -215,9 +214,10 @@ On architectures like x86, memory addressing supports `Base - Offset`. A C compi
 >
 > (Huge thanks to Reddit user _GuDzpoz_ for the rigorous fact-checking and for pointing me to this paper!)
 
-### The Big Picture
 
-```
+### The Big Picture {#the-big-picture}
+
+```text
 McCarthy's Lisp (1960)          abstract math
   atom  eq  car  cdr
   cons  quote  cond
@@ -241,12 +241,13 @@ McCarthy's Lisp (1960)          abstract math
 
 With the data representation in place, we can now map McCarthy's original 7 axioms directly onto these C macros.
 
-## Mapping McCarthy's 7 Axioms to C
+
+## Mapping McCarthy's 7 Axioms to C {#mapping-mccarthy-s-7-axioms-to-c}
 
 If McCarthy's 7 axioms are the soul of Lisp, the Emacs source is its physical body — but that body is not confined to a single file. The axioms split across three files depending on whether they are about _data representation_, _memory_, or _control flow_:
 
 | Axiom   | Meaning                   | C struct / function                                           | File      |
-| ------- | ------------------------- | ------------------------------------------------------------- | --------- |
+|---------|---------------------------|---------------------------------------------------------------|-----------|
 | `atom`  | is it NOT a pair?         | `!CONSP(obj)` (e.g., `EMACS_INT`, `struct Lisp_String`, etc.) | `lisp.h`  |
 | `eq`    | are two refs identical?   | `Lisp_Object` (raw 64-bit word compare)                       | `lisp.h`  |
 | `car`   | first element of pair     | `struct Lisp_Cons` - `.car` field                             | `lisp.h`  |
@@ -259,10 +260,10 @@ Notice the split: the first four axioms — `atom`, `eq`, `car`, `cdr` — are p
 
 PS. Other important files written in C.
 
-- `lread.c` — tokenizing and reading Lisp source into `Lisp_Object` trees
-- `eval.c` — evaluating those trees
-- `alloc.c` — allocating and garbage-collecting Lisp objects
-- `xdisp.c` — redisplay engine
+-   `lread.c` — tokenizing and reading Lisp source into `Lisp_Object` trees
+-   `eval.c` — evaluating those trees
+-   `alloc.c` — allocating and garbage-collecting Lisp objects
+-   `xdisp.c` — redisplay engine
 
 > Emacs C sources, use a lot of Lisp idioms abstracted as preprocessor macros, masking C language as Lisp look alike. Observe that, when you use them, you are not writing Lisp, you are writing pure C that just happens to look like Lisp. Those preprocessor macros exist for use in C core only, they are not visible to Elisp, and they happen to be macros for practical reasons of C programming: to always get inlined, in both release and debug builds. Alternative would be of course to implement them as inlined functions and I think they have start to replace some of those preprocessor macros with inlined versions. I am not really watching the mailing list and commited patches, so don't take me for the word.
 >
@@ -276,7 +277,8 @@ PS. Other important files written in C.
 >
 > _u/authurno1_ on Reddit
 
-## Next step
+
+## Next step {#next-step}
 
 The tagged pointer trick Emacs uses handles 8 fundamental types perfectly, but how does the editor fit the remaining dozens of complex types (like Buffers and Windows) within the exact same 3-bit restriction?
 
@@ -286,7 +288,7 @@ In the next post, we will look at how GNU Emacs expands this layout using a tech
 
 Emacs Internal Series:
 
-- #01: [Emacs is a Lisp Runtime in C, Not an Editor](@/technical/project/emacs-01.md)
-- #02: Data First — Deconstructing Lisp_Object in C
-- #03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/technical/project/emacs-03.md)
-- #04: [Interval Trees — Balancing by Text Length, Not Node Count](@/technical/project/emacs-04.md)
+-   \#01: [Emacs is a Lisp Runtime in C, Not an Editor](@/technical/project/emacs-01.md)
+-   \#02: Data First — Deconstructing Lisp_Object in C
+-   \#03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/technical/project/emacs-03.md)
+-   \#04: [Interval Trees — Balancing by Text Length, Not Node Count](@/technical/project/emacs-04.md)

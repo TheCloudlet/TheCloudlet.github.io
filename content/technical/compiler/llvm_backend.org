@@ -1,26 +1,25 @@
-+++
-title = "[WIP] RISC-V Compiler Backend Complete Reference"
-author = ["Yi-Ping Pan (Cloudlet)"]
-description = "A comprehensive guide covering instruction selection, register allocation, and instruction scheduling for LLVM backend engineers"
-date = 2025-11-22
-draft = true
-+++
+#+TITLE: [WIP] RISC-V Compiler Backend Complete Reference
+#+DESCRIPTION: A comprehensive guide covering instruction selection, register allocation, and instruction scheduling for LLVM backend engineers
+#+AUTHOR: Yi-Ping Pan (Cloudlet)
+#+DATE: 2025-11-22
+#+ZOLA_DRAFT: true
+#+ZOLA_TAXONOMIES_CATEGORIES: compiler-design
+#+ZOLA_TAXONOMIES_TAGS: instruction-selection register-allocation instruction-scheduling risc-v
+#+ZOLA_SECTION: technical/compiler
 
-## [WIP] RISC-V Compiler Backend Complete Reference {#wip-risc-v-compiler-backend-complete-reference}
+* [WIP] RISC-V Compiler Backend Complete Reference
 
-**Disclaimer: This is WIP (work-in-progrsss) personal note.**
+*Disclaimer: This is WIP (work-in-progrsss) personal note.*
 
 There are still a lot of points that might still need clarafacation. I'll use my free time to turn this note into better readible artitle.
 
+* Why Specialized Compiler Teams Matter
 
-## Why Specialized Compiler Teams Matter {#why-specialized-compiler-teams-matter}
+** The Business Case
 
+Modern SoC companies need compiler teams because *hardware differentiation requires software optimization*.
 
-### The Business Case {#the-business-case}
-
-Modern SoC companies need compiler teams because **hardware differentiation requires software optimization**.
-
-```text
+#+BEGIN_EXAMPLE
 +----------------------+-------------------------+
 | Open Source Backend  | Commercial Backend      |
 +----------------------+-------------------------+
@@ -30,37 +29,36 @@ Modern SoC companies need compiler teams because **hardware differentiation requ
 | Public Specs         | Internal Design Details |
 | Community-Driven     | Product Roadmap-Driven  |
 +----------------------+-------------------------+
-```
+#+END_EXAMPLE
 
-**Key Insight:** Open source optimizes for the **specification**, commercial optimizes for the **implementation**.
+*Key Insight:* Open source optimizes for the *specification*, commercial optimizes for the *implementation*.
 
+** The Compiler Engineer's Three Missions
 
-### The Compiler Engineer's Three Missions {#the-compiler-engineer-s-three-missions}
+#+BEGIN_EXAMPLE
+           Compiler Engineer's Core Responsibilities
+                           |
+        +------------------+------------------+
+        |                  |                  |
+ Microarchitectural   Custom ISA        Performance
+     Tuning          Extensions          Debugging
+        |                  |                  |
+  Pipeline/Cost       New Instr          Hotspot
+  Latency Model      ISel Pattern        Analysis
+#+END_EXAMPLE
 
-```text
-          Compiler Engineer's Core Responsibilities
-                          |
-       +------------------+------------------+
-       |                  |                  |
-Microarchitectural   Custom ISA        Performance
-    Tuning          Extensions          Debugging
-       |                  |                  |
- Pipeline/Cost       New Instr          Hotspot
- Latency Model      ISel Pattern        Analysis
-```
-
-**A. Microarchitectural Tuning**
+*A. Microarchitectural Tuning*
 
 Open source doesn't know your actual hardware:
 
--   Pipeline depth and latencies
--   Execution unit configuration
--   Branch prediction penalties
--   Cache hierarchy parameters
+- Pipeline depth and latencies
+- Execution unit configuration
+- Branch prediction penalties
+- Cache hierarchy parameters
 
-**Your Job:** Fill in the `TargetSubtarget` C++ file with real measured data from your hardware team.
+*Your Job:* Fill in the ~TargetSubtarget~ C++ file with real measured data from your hardware team.
 
-```cpp
+#+BEGIN_SRC cpp
 // RISCVSubtarget.cpp - The Source of Truth
 unsigned RISCVSubtarget::getInstrLatency(unsigned Opcode) {
   switch (Opcode) {
@@ -69,37 +67,35 @@ unsigned RISCVSubtarget::getInstrLatency(unsigned Opcode) {
   case RISCV::LOAD: return 3;  // L1 hit: 3 cycles
   }
 }
-```
+#+END_SRC
 
-**B. Custom ISA Extensions**
+*B. Custom ISA Extensions*
 
 RISC-V's extensibility allows competitive advantage through private instructions:
 
-```text
+#+BEGIN_EXAMPLE
 Standard RISC-V + Company Secret Sauce
       |                    |
    RV64GC            Custom Crypto/ML/DSP
                      Instructions
-```
+#+END_EXAMPLE
 
-**C. Performance Debugging**
+*C. Performance Debugging*
 
 Bridge hardware and software:
 
-1.  Profile with `perf` → find hotspots
-2.  Examine assembly → identify root cause
-3.  Trace compiler passes → understand decisions
-4.  Implement fixes → ISel patterns, cost models, custom passes
+1. Profile with ~perf~ → find hotspots
+2. Examine assembly → identify root cause
+3. Trace compiler passes → understand decisions
+4. Implement fixes → ISel patterns, cost models, custom passes
 
----
+-----
 
+* RISC-V Architecture Fundamentals
 
-## RISC-V Architecture Fundamentals {#risc-v-architecture-fundamentals}
+** Load-Store Architecture
 
-
-### Load-Store Architecture {#load-store-architecture}
-
-```text
+#+BEGIN_EXAMPLE
 +--------------------------------------------------------+
 |                RISC Load-Store Architecture            |
 |                                                        |
@@ -114,14 +110,13 @@ Bridge hardware and software:
 | Rule 1: ALL computation in REGISTERS ONLY              |
 | Rule 2: ONLY load/store touch memory                   |
 +--------------------------------------------------------+
-```
+#+END_EXAMPLE
 
-
-### Instruction Formats {#instruction-formats}
+** Instruction Formats
 
 All base instructions are 32 bits:
 
-```text
+#+BEGIN_EXAMPLE
 R-Type (add rd, rs1, rs2):
  31      25|24  20|19  15|14 12|11   7|6     0
  +---------+------+------+-----+------+-------+
@@ -139,13 +134,12 @@ S-Type (sw rs2, offset(rs1)):
  +---------+------+------+-----+--------+-------+
  |imm[11:5]| rs2  | rs1  |func3|imm[4:0]|opcode |
  +---------+------+------+-----+--------+-------+
-```
+#+END_EXAMPLE
 
-
-### Register ABI {#register-abi}
+** Register ABI
 
 | Reg    | ABI    | Saved By | Purpose     | Notes             |
-|--------|--------|----------|-------------|-------------------|
+|--------+--------+----------+-------------+-------------------|
 | x0     | zero   | ---      | Zero        | Hardwired to 0    |
 | x1     | ra     | Caller   | Return addr | Link register     |
 | x2     | sp     | Callee   | Stack ptr   | Must preserve     |
@@ -160,20 +154,18 @@ S-Type (sw rs2, offset(rs1)):
 Caller-Saved: Free to clobber, caller must save if needed
 Callee-Saved: MUST preserve if used (requires prolog/epilog)
 
-**Critical for RegAlloc:**
+*Critical for RegAlloc:*
 
--   **Caller-saved (t0-t6, a0-a7):** Free in leaf functions, don't survive calls
--   **Callee-saved (s0-s11):** Survive calls, but EXPENSIVE (prolog/epilog overhead)
+- *Caller-saved (t0-t6, a0-a7):* Free in leaf functions, don't survive calls
+- *Callee-saved (s0-s11):* Survive calls, but EXPENSIVE (prolog/epilog overhead)
 
----
+-----
 
+* LLVM Backend Pipeline
 
-## LLVM Backend Pipeline {#llvm-backend-pipeline}
+** The Seven-Stage Pipeline
 
-
-### The Seven-Stage Pipeline {#the-seven-stage-pipeline}
-
-```text
+#+BEGIN_EXAMPLE
 +------------------------------------------------------------+
 |                LLVM Backend 7-Stage Pipeline               |
 +------------------------------------------------------------+
@@ -232,12 +224,11 @@ Callee-Saved: MUST preserve if used (requires prolog/epilog)
 |    v                                                       |
 | Machine Code (RISC-V binary)                               |
 +------------------------------------------------------------+
-```
+#+END_EXAMPLE
 
+** Stage I/O
 
-### Stage I/O {#stage-i-o}
-
-```text
+#+BEGIN_EXAMPLE
 +----------+---------------------------+---------------------------+
 | Stage    | Input                     | Output                    |
 +----------+---------------------------+---------------------------+
@@ -262,12 +253,11 @@ Callee-Saved: MUST preserve if used (requires prolog/epilog)
 |          | mv a2, a0                 | beq a1, zero, .L1         |
 |          | beq a2, zero, .L1         | (branch optimized)        |
 +----------+---------------------------+---------------------------+
-```
+#+END_EXAMPLE
 
+** Why This Order?
 
-### Why This Order? {#why-this-order}
-
-```text
+#+BEGIN_EXAMPLE
 ISel first: Need target instructions before scheduling
   |
   v
@@ -282,21 +272,19 @@ PEI after RegAlloc: Needs to know which regs were used
   |               -> Cannot determine frame size before
   v
 Post-RA opts: Clean up redundancies
-```
+#+END_EXAMPLE
 
----
+-----
 
+* STAGE 1: Instruction Selection
 
-## STAGE 1: Instruction Selection {#stage-1-instruction-selection}
-
-
-### The Problem {#the-problem}
+** The Problem
 
 Transform target-independent IR into target-specific instructions.
 
-**Challenge:** One IR operation → many possible instruction sequences.
+*Challenge:* One IR operation → many possible instruction sequences.
 
-```text
+#+BEGIN_EXAMPLE
 Example: Load constant 12345
 
 LLVM IR: %1 = i32 12345
@@ -312,12 +300,11 @@ Option C (from memory):
   lw a0, .LCPI0_0         # 1 instr + memory access
 
 Which to choose? Depends on COST MODEL!
-```
+#+END_EXAMPLE
 
+** DAG Tiling Theory
 
-### DAG Tiling Theory {#dag-tiling-theory}
-
-```text
+#+BEGIN_EXAMPLE
 Step 1: Build SelectionDAG
 
 IR:  %result = add (mul %a, %b), %c
@@ -348,12 +335,11 @@ Pattern 2: Fused (1 instruction, if available)
 Generated: MADD result, a, b, c
 
 ISel picks Pattern 2 if: Cost(MADD) < Cost(MUL) + Cost(ADD)
-```
+#+END_EXAMPLE
 
+** TableGen Implementation
 
-### TableGen Implementation {#tablegen-implementation}
-
-```cpp
+#+BEGIN_SRC cpp
 // Define instruction encoding
 class RVInstR<bits<7> funct7, bits<3> funct3, bits<7> opcode> {
   bits<5> rd;
@@ -381,12 +367,11 @@ def : Pat<(add GPR:$rs1, GPR:$rs2),
 // Pattern with immediate
 def : Pat<(add GPR:$rs1, simm12:$imm),
           (ADDI GPR:$rs1, simm12:$imm)>;
-```
+#+END_SRC
 
+** Cost Model
 
-### Cost Model {#cost-model}
-
-```text
+#+BEGIN_EXAMPLE
 Default: Estimated cycles from TargetSubtarget
 
 Example:
@@ -399,26 +384,23 @@ Example:
   ISel chooses Pattern B (lower cost)
 
 For -Os (size): Use instruction byte count instead
-```
+#+END_EXAMPLE
 
+** References
 
-### References {#references}
+- *LLVM SelectionDAG*: ~llvm/include/llvm/CodeGen/SelectionDAG.h~
+- *TableGen Backend*: ~llvm/utils/TableGen/CodeGenDAGPatterns.cpp~
+- *RISC-V ISel*: ~llvm/lib/Target/RISCV/RISCVISelLowering.cpp~
+- *Pattern Matching*: ~llvm/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp~
+- *LLVM Documentation*: [[https://llvm.org/docs/CodeGenerator.html#instruction-selection][Instruction Selection]]
 
--   **LLVM SelectionDAG**: `llvm/include/llvm/CodeGen/SelectionDAG.h`
--   **TableGen Backend**: `llvm/utils/TableGen/CodeGenDAGPatterns.cpp`
--   **RISC-V ISel**: `llvm/lib/Target/RISCV/RISCVISelLowering.cpp`
--   **Pattern Matching**: `llvm/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp`
--   **LLVM Documentation**: [Instruction Selection](https://llvm.org/docs/CodeGenerator.html#instruction-selection)
+-----
 
----
+* STAGE 2: Instruction Scheduling
 
+** The Dual Mission
 
-## STAGE 2: Instruction Scheduling {#stage-2-instruction-scheduling}
-
-
-### The Dual Mission {#the-dual-mission}
-
-```text
+#+BEGIN_EXAMPLE
 +------------------------------------------------------------+
 |        Instruction Scheduling: The Dual Mandate            |
 +------------------------------------------------------------+
@@ -441,12 +423,11 @@ For -Os (size): Use instruction byte count instead
 |                                                            |
 | Scheduler must balance these competing goals!              |
 +------------------------------------------------------------+
-```
+#+END_EXAMPLE
 
+** Job 1: Hiding Latency
 
-### Job 1: Hiding Latency {#job-1-hiding-latency}
-
-```text
+#+BEGIN_EXAMPLE
 Bad Schedule (stalls):
   lw  a0, 0(sp)    # Cycle 0: Issue load (3-cycle latency)
   add a1, a0, a2   # Cycle 1: STALL (a0 not ready)
@@ -458,11 +439,11 @@ Good Schedule (hide latency):
   add a3, a4, a5   # Cycle 1: Unrelated work
   sub a6, a7, t0   # Cycle 2: More unrelated work
   add a1, a0, a2   # Cycle 3: Now a0 is ready!
-```
+#+END_EXAMPLE
 
-**List Scheduling Algorithm:**
+*List Scheduling Algorithm:*
 
-```text
+#+BEGIN_EXAMPLE
 1. Build dependency DAG (nodes=instrs, edges=dependencies)
 2. Compute priorities (= longest path to exit)
 3. Greedy schedule:
@@ -470,12 +451,11 @@ Good Schedule (hide latency):
      Pick highest priority instruction
      Schedule at earliest legal cycle
      Update ready set
-```
+#+END_EXAMPLE
 
+** Job 2: Minimizing Register Pressure
 
-### Job 2: Minimizing Register Pressure {#job-2-minimizing-register-pressure}
-
-```text
+#+BEGIN_EXAMPLE
 Live Range = span from definition to last use
 
 Bad Schedule (long ranges):
@@ -503,26 +483,24 @@ Good Schedule (short ranges):
 
 Interference: NONE!
 Need only 1 color - can reuse same register!
-```
+#+END_EXAMPLE
 
-**Heuristic:** Prefer instructions that:
+*Heuristic:* Prefer instructions that:
 
-1.  Use OLD values (defined long ago) → kills them early
-2.  Don't define NEW values → delays new live ranges
+1. Use OLD values (defined long ago) → kills them early
+2. Don't define NEW values → delays new live ranges
 
+** References
 
-### References {#references}
+- *LLVM Scheduler*: ~llvm/include/llvm/CodeGen/ScheduleDAG.h~
+- *List Scheduling*: ~llvm/lib/CodeGen/ScheduleDAGInstrs.cpp~
+- *Machine Scheduler*: ~llvm/lib/CodeGen/MachineScheduler.cpp~
+- *RISC-V Scheduling*: ~llvm/lib/Target/RISCV/RISCVSchedule*.td~
+- *LLVM Documentation*: [[https://llvm.org/docs/MIRLangRef.html#scheduling][Machine Instruction Scheduler]]
 
--   **LLVM Scheduler**: `llvm/include/llvm/CodeGen/ScheduleDAG.h`
--   **List Scheduling**: `llvm/lib/CodeGen/ScheduleDAGInstrs.cpp`
--   **Machine Scheduler**: `llvm/lib/CodeGen/MachineScheduler.cpp`
--   **RISC-V Scheduling**: `llvm/lib/Target/RISCV/RISCVSchedule*.td`
--   **LLVM Documentation**: [Machine Instruction Scheduler](https://llvm.org/docs/MIRLangRef.html#scheduling)
+** Pre-RA vs Post-RA Scheduling
 
-
-### Pre-RA vs Post-RA Scheduling {#pre-ra-vs-post-ra-scheduling}
-
-```text
+#+BEGIN_EXAMPLE
 +--------+---------------------------+-------------------------+
 |        | Pre-RA                    | Post-RA                 |
 +--------+---------------------------+-------------------------+
@@ -531,43 +509,39 @@ Need only 1 color - can reuse same register!
 | Goal   | Minimize register pressure| Hide latencies          |
 | Freedom| HIGH (can reorder freely) | LOW (register deps)     |
 +--------+---------------------------+-------------------------+
-```
+#+END_EXAMPLE
 
----
+-----
 
+* STAGE 3: SSA-based Machine Optimizations
 
-## STAGE 3: SSA-based Machine Optimizations {#stage-3-ssa-based-machine-optimizations}
-
-
-### Overview {#overview}
+** Overview
 
 Machine-level optimizations operate on MachineIR (target-specific instructions with virtual registers) but before register allocation. These passes are target-independent and work across all architectures.
 
-**Key passes:**
+*Key passes:*
 
--   **MachineCSE** (Common Subexpression Elimination): Removes redundant computations
--   **MachineLICM** (Loop Invariant Code Motion): Moves loop-invariant operations outside loops
--   **Machine Copy Propagation**: Eliminates unnecessary register copies
--   **Dead Machine Instruction Elimination**: Removes unused instructions
+- *MachineCSE* (Common Subexpression Elimination): Removes redundant computations
+- *MachineLICM* (Loop Invariant Code Motion): Moves loop-invariant operations outside loops
+- *Machine Copy Propagation*: Eliminates unnecessary register copies
+- *Dead Machine Instruction Elimination*: Removes unused instructions
 
-**To write:**
+*To write:*
 
--   Detailed analysis of MachineCSE algorithm
--   MachineLICM heuristics and profitability analysis
--   Interaction with earlier and later passes
--   Target-specific customization hooks
+- Detailed analysis of MachineCSE algorithm
+- MachineLICM heuristics and profitability analysis
+- Interaction with earlier and later passes
+- Target-specific customization hooks
 
-**Reference:** See LLVM's `MachineCSE.cpp`, `MachineLICM.cpp`, and related passes in `llvm/lib/CodeGen/`.
+*Reference:* See LLVM's ~MachineCSE.cpp~, ~MachineLICM.cpp~, and related passes in ~llvm/lib/CodeGen/~.
 
----
+-----
 
+* STAGE 4: Register Allocation
 
-## STAGE 4: Register Allocation {#stage-4-register-allocation}
+** The Core Problem
 
-
-### The Core Problem {#the-core-problem}
-
-```text
+#+BEGIN_EXAMPLE
 +------------------------------------------------------------+
 |            The Register Allocation Crisis                  |
 +------------------------------------------------------------+
@@ -586,12 +560,11 @@ Machine-level optimizations operate on MachineIR (target-specific instructions w
 | SUCCESS IF: No conflicts                                   |
 | FAILURE IF: Not enough registers -> SPILLING               |
 +------------------------------------------------------------+
-```
+#+END_EXAMPLE
 
+** Graph Coloring
 
-### Graph Coloring {#graph-coloring}
-
-```text
+#+BEGIN_EXAMPLE
 Step 1: Build Interference Graph
 
 Nodes = virtual registers
@@ -622,12 +595,11 @@ adjacent nodes get different colors.
 SUCCESS! Used 4 colors for 4-clique.
 
 Step 3: If K-coloring fails -> SPILLING
-```
+#+END_EXAMPLE
 
+** The Spilling Disaster
 
-### The Spilling Disaster {#the-spilling-disaster}
-
-```text
+#+BEGIN_EXAMPLE
 +------------------------------------------------------------+
 |                    Spilling Process                        |
 +------------------------------------------------------------+
@@ -654,12 +626,11 @@ Step 3: If K-coloring fails -> SPILLING
 |   - sw/lw: ~6-10 cycles per spill (L1 cache)              |
 |   - In tight loop: 2X slowdown possible!                   |
 +------------------------------------------------------------+
-```
+#+END_EXAMPLE
 
+** LLVM Register Allocators
 
-### LLVM Register Allocators {#llvm-register-allocators}
-
-```text
+#+BEGIN_EXAMPLE
 +----------------+----------------------+------------------------+
 | Allocator      | Algorithm            | Use Case               |
 +----------------+----------------------+------------------------+
@@ -668,27 +639,24 @@ Step 3: If K-coloring fails -> SPILLING
 |   greedy       | coloring w/ splitting| Good quality           |
 | -regalloc=pbqp | Boolean QP           | Research/extreme opt   |
 +----------------+----------------------+------------------------+
-```
+#+END_EXAMPLE
 
+** References
 
-### References {#references}
+- *Register Allocation*: ~llvm/lib/CodeGen/RegAllocGreedy.cpp~
+- *Live Intervals*: ~llvm/include/llvm/CodeGen/LiveInterval.h~
+- *Spilling*: ~llvm/lib/CodeGen/InlineSpiller.cpp~
+- *Virtual Registers*: ~llvm/include/llvm/CodeGen/VirtRegMap.h~
+- *LLVM Documentation*: [[https://llvm.org/docs/CodeGenerator.html#register-allocation][Register Allocation]]
+- *Research Paper*: "Iterated Register Coalescing" by George & Appel
 
--   **Register Allocation**: `llvm/lib/CodeGen/RegAllocGreedy.cpp`
--   **Live Intervals**: `llvm/include/llvm/CodeGen/LiveInterval.h`
--   **Spilling**: `llvm/lib/CodeGen/InlineSpiller.cpp`
--   **Virtual Registers**: `llvm/include/llvm/CodeGen/VirtRegMap.h`
--   **LLVM Documentation**: [Register Allocation](https://llvm.org/docs/CodeGenerator.html#register-allocation)
--   **Research Paper**: "Iterated Register Coalescing" by George &amp; Appel
+-----
 
----
+* STAGE 5: Prolog/Epilog Insertion
 
+** When and Why
 
-## STAGE 5: Prolog/Epilog Insertion {#stage-5-prolog-epilog-insertion}
-
-
-### When and Why {#when-and-why}
-
-```text
+#+BEGIN_EXAMPLE
 +------------------------------------------------------------+
 |              Prolog/Epilog Insertion (PEI)                 |
 +------------------------------------------------------------+
@@ -721,12 +689,11 @@ Step 3: If K-coloring fails -> SPILLING
 |   addi sp, sp, 16    #         Deallocate frame            |
 |   ret                                                       |
 +------------------------------------------------------------+
-```
+#+END_EXAMPLE
 
+** Stack Frame Layout
 
-### Stack Frame Layout {#stack-frame-layout}
-
-```text
+#+BEGIN_EXAMPLE
         High Address
         +------------------+
         | Caller's Frame   |
@@ -758,12 +725,11 @@ Step 3: If K-coloring fails -> SPILLING
 Frame Size = callee_saved_space + spill_space +
              locals_space + outgoing_args_space +
              alignment_padding (align to 16 bytes)
-```
+#+END_EXAMPLE
 
+** PEI Algorithm
 
-### PEI Algorithm {#pei-algorithm}
-
-```text
+#+BEGIN_EXAMPLE
 1. Gather Information
    - Scan function for used callee-saved registers
    - Get spill space size from RegAlloc
@@ -787,48 +753,43 @@ Frame Size = callee_saved_space + spill_space +
    FOR each used callee-saved reg r:
      emit: lw r, offset(sp)
    emit: addi sp, sp, frame_size
-```
+#+END_EXAMPLE
 
+** References
 
-### References {#references}
+- *Prolog/Epilog Insertion*: ~llvm/lib/CodeGen/PrologEpilogInserter.cpp~
+- *Frame Lowering*: ~llvm/include/llvm/CodeGen/TargetFrameLowering.h~
+- *RISC-V Frame Lowering*: ~llvm/lib/Target/RISCV/RISCVFrameLowering.cpp~
+- *Stack Frame Layout*: ~llvm/lib/CodeGen/MachineFrameInfo.cpp~
+- *Calling Conventions*: ~llvm/lib/Target/RISCV/RISCVCallingConv.td~
+- *RISC-V ABI Spec*: [[https://github.com/riscv-non-isa/riscv-elf-psabi-doc][RISC-V Calling Convention]]
 
--   **Prolog/Epilog Insertion**: `llvm/lib/CodeGen/PrologEpilogInserter.cpp`
--   **Frame Lowering**: `llvm/include/llvm/CodeGen/TargetFrameLowering.h`
--   **RISC-V Frame Lowering**: `llvm/lib/Target/RISCV/RISCVFrameLowering.cpp`
--   **Stack Frame Layout**: `llvm/lib/CodeGen/MachineFrameInfo.cpp`
--   **Calling Conventions**: `llvm/lib/Target/RISCV/RISCVCallingConv.td`
--   **RISC-V ABI Spec**: [RISC-V Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc)
+-----
 
----
+* STAGE 6: Post-RA Optimizations & Phi Elimination
 
-
-## STAGE 6: Post-RA Optimizations &amp; Phi Elimination {#stage-6-post-ra-optimizations-and-phi-elimination}
-
-
-### Overview {#overview}
+** Overview
 
 After register allocation, several optimization passes clean up the generated code by removing redundancies and improving instruction sequences. This stage includes both phi elimination (covered here) and other post-RA optimizations.
 
-**Covered in this section:**
+*Covered in this section:*
 
--   **Phi Elimination** - How SSA phi nodes are removed (detailed below)
+- *Phi Elimination* - How SSA phi nodes are removed (detailed below)
 
-**To write:**
+*To write:*
 
--   **Peephole optimization** - Removing redundant move instructions
--   **Branch optimization** - Branch folding, inversion, and simplification
--   **Dead code elimination** - Removing unused instructions after register allocation
--   **Block placement** - Optimal basic block ordering for better cache performance
+- *Peephole optimization* - Removing redundant move instructions
+- *Branch optimization* - Branch folding, inversion, and simplification
+- *Dead code elimination* - Removing unused instructions after register allocation
+- *Block placement* - Optimal basic block ordering for better cache performance
 
----
+-----
 
+** Phi Elimination
 
-### Phi Elimination {#phi-elimination}
+*** What is Phi?
 
-
-#### What is Phi? {#what-is-phi}
-
-```text
+#+BEGIN_EXAMPLE
 Non-SSA:
   int x;
   if (cond) {
@@ -852,17 +813,15 @@ Phi semantics:
 
   IF control from %then: x3 = x1
   ELSE IF control from %else: x3 = x2
-```
+#+END_EXAMPLE
 
+** The Problem
 
-### The Problem {#the-problem}
+*Real CPUs have NO phi instruction!* RegAlloc must eliminate it.
 
-**Real CPUs have NO phi instruction!** RegAlloc must eliminate it.
+** Case A: Register Coalescing (Good Ending)
 
-
-### Case A: Register Coalescing (Good Ending) {#case-a-register-coalescing--good-ending}
-
-```text
+#+BEGIN_EXAMPLE
 +------------------------------------------------------------+
 |             Phi Elimination: The Good Ending               |
 +------------------------------------------------------------+
@@ -892,12 +851,11 @@ Phi semantics:
 |                                                            |
 | COST: ZERO! Phi eliminated for free!                       |
 +------------------------------------------------------------+
-```
+#+END_EXAMPLE
 
+** Case B: Copy Insertion (Bad Ending)
 
-### Case B: Copy Insertion (Bad Ending) {#case-b-copy-insertion--bad-ending}
-
-```text
+#+BEGIN_EXAMPLE
 +------------------------------------------------------------+
 |             Phi Elimination: The Bad Ending                |
 +------------------------------------------------------------+
@@ -927,12 +885,11 @@ Phi semantics:
 |       -> May trigger MORE SPILLING                         |
 |       -> VICIOUS CYCLE!                                    |
 +------------------------------------------------------------+
-```
+#+END_EXAMPLE
 
+** Optimization Strategies
 
-### Optimization Strategies {#optimization-strategies}
-
-```text
+#+BEGIN_EXAMPLE
 Goal: Make coalescing succeed as often as possible
 
 1. Improve Pre-RA Scheduling
@@ -946,62 +903,57 @@ Goal: Make coalescing succeed as often as possible
 
 4. Critical Edge Splitting
    - Insert empty blocks to simplify phi placement
-```
+#+END_EXAMPLE
 
+** References
 
-### References {#references}
+- *PHI Elimination*: ~llvm/lib/CodeGen/PHIElimination.cpp~
+- *Register Coalescing*: ~llvm/lib/CodeGen/RegisterCoalescer.cpp~
+- *Two-Address Instructions*: ~llvm/lib/CodeGen/TwoAddressInstructionPass.cpp~
+- *Critical Edge Splitting*: ~llvm/lib/CodeGen/MachineBasicBlock.cpp~
+- *LLVM Documentation*: [[https://llvm.org/docs/CodeGenerator.html#ssa-based-machine-code-optimizations][SSA-based Machine Code Optimizations]]
 
--   **PHI Elimination**: `llvm/lib/CodeGen/PHIElimination.cpp`
--   **Register Coalescing**: `llvm/lib/CodeGen/RegisterCoalescer.cpp`
--   **Two-Address Instructions**: `llvm/lib/CodeGen/TwoAddressInstructionPass.cpp`
--   **Critical Edge Splitting**: `llvm/lib/CodeGen/MachineBasicBlock.cpp`
--   **LLVM Documentation**: [SSA-based Machine Code Optimizations](https://llvm.org/docs/CodeGenerator.html#ssa-based-machine-code-optimizations)
+-----
 
----
+* STAGE 7: Code Emission
 
-
-## STAGE 7: Code Emission {#stage-7-code-emission}
-
-
-### Overview {#overview}
+** Overview
 
 Code emission is the final stage where MachineIR (machine instructions with physical registers) is converted to actual machine code in object file format (ELF, Mach-O, COFF).
 
-**Key components:**
+*Key components:*
 
--   **MCStreamer**: Abstract interface for emitting directives and instructions
--   **MCCodeEmitter**: Encodes instructions to binary format
--   **MCAsmBackend**: Handles relocations and fixups
--   **MCObjectWriter**: Writes final object file format
+- *MCStreamer*: Abstract interface for emitting directives and instructions
+- *MCCodeEmitter*: Encodes instructions to binary format
+- *MCAsmBackend*: Handles relocations and fixups
+- *MCObjectWriter*: Writes final object file format
 
-**Process:**
+*Process:*
 
-1.  **Lowering**: Convert MachineInstr to MCInst (more detailed representation)
-2.  **Relaxation**: Adjust instruction encoding (e.g., short vs. long branches)
-3.  **Encoding**: Convert MCInst to byte sequences
-4.  **Symbol resolution**: Handle labels, relocations, and external references
-5.  **Section emission**: Write code, data, and metadata sections
+1. *Lowering*: Convert MachineInstr to MCInst (more detailed representation)
+2. *Relaxation*: Adjust instruction encoding (e.g., short vs. long branches)
+3. *Encoding*: Convert MCInst to byte sequences
+4. *Symbol resolution*: Handle labels, relocations, and external references
+5. *Section emission*: Write code, data, and metadata sections
 
-**To write:**
+*To write:*
 
--   Detailed MCStreamer API and usage patterns
--   Instruction encoding specifics for RISC-V
--   Relocation types and linker interaction
--   Debug information emission (DWARF)
--   Assembly printer vs. object file emission
--   Target-specific hooks and customization
+- Detailed MCStreamer API and usage patterns
+- Instruction encoding specifics for RISC-V
+- Relocation types and linker interaction
+- Debug information emission (DWARF)
+- Assembly printer vs. object file emission
+- Target-specific hooks and customization
 
-**Reference:** See LLVM's `MC/` directory, `MCStreamer.h`, `MCCodeEmitter.h`, and target-specific implementations.
+*Reference:* See LLVM's ~MC/~ directory, ~MCStreamer.h~, ~MCCodeEmitter.h~, and target-specific implementations.
 
----
+-----
 
+* Performance Analysis
 
-## Performance Analysis {#performance-analysis}
+** Tool Comparison
 
-
-### Tool Comparison {#tool-comparison}
-
-```text
+#+BEGIN_EXAMPLE
 +------------------+------------------+-------------------------+
 | Tool             | Type             | Use Case                |
 +------------------+------------------+-------------------------+
@@ -1016,12 +968,11 @@ Code emission is the final stage where MachineIR (machine instructions with phys
 | (Linux)          | (PMU counters)   | Real CPU performance    |
 |                  |                  | Low overhead (~1%)      |
 +------------------+------------------+-------------------------+
-```
+#+END_EXAMPLE
 
+** perf: The Hardware Truth
 
-### perf: The Hardware Truth {#perf-the-hardware-truth}
-
-```bash
+#+BEGIN_SRC bash
 # Record performance data
 perf record -F 99 ./myprogram
 
@@ -1040,14 +991,13 @@ perf annotate --stdio
 #  15.7% | add a2, a2, a0
 #   0.1% | addi a1, a1, 4
 #   8.2% | bne a1, a3, .loop
-```
+#+END_SRC
 
-**Why perf is essential:** Only real hardware reveals cache effects, branch mispredictions, out-of-order execution, etc.
+*Why perf is essential:* Only real hardware reveals cache effects, branch mispredictions, out-of-order execution, etc.
 
+** The Debugging Loop
 
-### The Debugging Loop {#the-debugging-loop}
-
-```text
+#+BEGIN_EXAMPLE
 +------------------------------------------------------------+
 |         Performance Debugging Workflow                     |
 +------------------------------------------------------------+
@@ -1076,12 +1026,11 @@ perf annotate --stdio
 | STEP 6: Verify                                             |
 |   Re-measure with perf, confirm hotspot eliminated         |
 +------------------------------------------------------------+
-```
+#+END_EXAMPLE
 
+** LLVM Debug Flags
 
-### LLVM Debug Flags {#llvm-debug-flags}
-
-```bash
+#+BEGIN_SRC bash
 # View ISel decisions
 llc -march=riscv64 -debug-only=isel input.ll
 
@@ -1102,19 +1051,17 @@ llc -march=riscv64 -verify-machineinstrs input.ll
 
 # Time each pass
 llc -march=riscv64 -time-passes input.ll
-```
+#+END_SRC
 
----
+-----
 
+* Practical Optimization Cases
 
-## Practical Optimization Cases {#practical-optimization-cases}
+** Case 1: Eliminating Spills in Loop
 
+*Problem:* Hot loop with excessive spilling
 
-### Case 1: Eliminating Spills in Loop {#case-1-eliminating-spills-in-loop}
-
-**Problem:** Hot loop with excessive spilling
-
-```c
+#+BEGIN_SRC c
 int dotproduct(int *a, int *b, int n) {
   int sum = 0;
   for (int i = 0; i < n; i++) {
@@ -1122,11 +1069,11 @@ int dotproduct(int *a, int *b, int n) {
   }
   return sum;
 }
-```
+#+END_SRC
 
-**Bad Assembly (with spills):**
+*Bad Assembly (with spills):*
 
-```asm
+#+BEGIN_SRC asm
 dotproduct:
   addi sp, sp, -32    # Prolog
   sw   ra, 28(sp)
@@ -1157,18 +1104,18 @@ dotproduct:
   mv   a0, s0
   # Epilog ...
   ret
-```
+#+END_SRC
 
-**Root Cause:**
+*Root Cause:*
 
--   Uses 7 virtual registers
--   Only 6 callee-saved regs available
--   Must spill 1 register
--   Callee-saved registers require prolog/epilog
+- Uses 7 virtual registers
+- Only 6 callee-saved regs available
+- Must spill 1 register
+- Callee-saved registers require prolog/epilog
 
-**Solution: Use caller-saved registers**
+*Solution: Use caller-saved registers*
 
-```c
+#+BEGIN_SRC c
 int dotproduct_opt(int *a, int *b, int n) {
   int sum = 0;
   int *end = a + n;
@@ -1177,11 +1124,11 @@ int dotproduct_opt(int *a, int *b, int n) {
   }
   return sum;
 }
-```
+#+END_SRC
 
-**Good Assembly (no spills):**
+*Good Assembly (no spills):*
 
-```asm
+#+BEGIN_SRC asm
 dotproduct_opt:
   li   a4, 0          # sum (use a4, caller-saved!)
   slli a2, a2, 2
@@ -1197,28 +1144,27 @@ dotproduct_opt:
 .exit:
   mv   a0, a4
   ret                 # NO PROLOG/EPILOG!
-```
+#+END_SRC
 
-**Results:**
+*Results:*
 
--   Before: 7 vregs, 1 spill/reload, 12 cycles/iter
--   After: 5 vregs, 0 spills, 7 cycles/iter
--   **Speedup: 1.7x**
+- Before: 7 vregs, 1 spill/reload, 12 cycles/iter
+- After: 5 vregs, 0 spills, 7 cycles/iter
+- *Speedup: 1.7x*
 
-**Lessons:**
+*Lessons:*
 
-1.  Caller-saved registers are FREE in leaf functions
-2.  Shorter live ranges = less interference
-3.  Sometimes algorithm change &gt; compiler tricks
+1. Caller-saved registers are FREE in leaf functions
+2. Shorter live ranges = less interference
+3. Sometimes algorithm change > compiler tricks
 
----
+-----
 
+** Case 2: Custom ISel Pattern
 
-### Case 2: Custom ISel Pattern {#case-2-custom-isel-pattern}
+*Scenario:* Your CPU has custom multiply-accumulate instruction
 
-**Scenario:** Your CPU has custom multiply-accumulate instruction
-
-```cpp
+#+BEGIN_SRC cpp
 // Define custom instruction
 def MACC : RVInstR4<0b1000011, 0b000, OPC_CUSTOM_0,
                     (outs GPR:$rd),
@@ -1230,66 +1176,63 @@ def MACC : RVInstR4<0b1000011, 0b000, OPC_CUSTOM_0,
 // ISel pattern: match (a * b) + c
 def : Pat<(add (mul GPR:$rs1, GPR:$rs2), GPR:$rs3),
           (MACC GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-```
+#+END_SRC
 
-**Test:**
+*Test:*
 
-```c
+#+BEGIN_SRC c
 int mac(int a, int b, int c) {
   return (a * b) + c;
 }
-```
+#+END_SRC
 
-**Generated Assembly:**
+*Generated Assembly:*
 
-```asm
+#+BEGIN_SRC asm
 mac:
   macc a0, a0, a1, a2    # MACC instruction used!
   ret
-```
+#+END_SRC
 
-**Performance:**
+*Performance:*
 
--   Without MACC: MUL (3 cyc) + ADD (1 cyc) = 4-5 cycles
--   With MACC: 3 cycles
--   **Speedup: 1.3x for this pattern**
+- Without MACC: MUL (3 cyc) + ADD (1 cyc) = 4-5 cycles
+- With MACC: 3 cycles
+- *Speedup: 1.3x for this pattern*
 
----
+-----
 
+** Case 3: Loop Unrolling vs Register Pressure
 
-### Case 3: Loop Unrolling vs Register Pressure {#case-3-loop-unrolling-vs-register-pressure}
+*Problem:* Aggressive unrolling causes spilling
 
-**Problem:** Aggressive unrolling causes spilling
-
-```c
+#+BEGIN_SRC c
 void vector_add(float *a, float *b, float *c, int n) {
   for (int i = 0; i < n; i++) {
     c[i] = a[i] + b[i];
   }
 }
-```
+#+END_SRC
 
-**Unroll 8X:** Uses 26 virtual registers → tight pressure → spilling
+*Unroll 8X:* Uses 26 virtual registers → tight pressure → spilling
 
-**Unroll 2X:** Uses 9 virtual registers → no spilling
+*Unroll 2X:* Uses 9 virtual registers → no spilling
 
-**Results:**
+*Results:*
 
--   Unroll 8 with spills: 100 cycles/iter
--   Unroll 2 without spills: 60 cycles/iter
--   **Speedup: 1.67x by REDUCING unrolling!**
+- Unroll 8 with spills: 100 cycles/iter
+- Unroll 2 without spills: 60 cycles/iter
+- *Speedup: 1.67x by REDUCING unrolling!*
 
-**Lesson:** More unrolling ≠ better performance. Must balance ILP vs register pressure.
+*Lesson:* More unrolling ≠ better performance. Must balance ILP vs register pressure.
 
----
+-----
 
+* Appendix: Quick Reference
 
-## Appendix: Quick Reference {#appendix-quick-reference}
+** Common RISC-V Instructions
 
-
-### Common RISC-V Instructions {#common-risc-v-instructions}
-
-```text
+#+BEGIN_EXAMPLE
 ADD   rd, rs1, rs2       rd = rs1 + rs2
 SUB   rd, rs1, rs2       rd = rs1 - rs2
 ADDI  rd, rs1, imm       rd = rs1 + imm
@@ -1301,64 +1244,58 @@ BEQ   rs1, rs2, label    if (rs1 == rs2) goto label
 BNE   rs1, rs2, label    if (rs1 != rs2) goto label
 JAL   rd, label          rd = PC+4; goto label
 LUI   rd, imm            rd = imm << 12
-```
+#+END_EXAMPLE
 
----
+-----
 
+* Conclusion
 
-## Conclusion {#conclusion}
+*Key Takeaways:*
 
-**Key Takeaways:**
+1. Backend engineering = *hardware-software tradeoffs*
+2. *Three Pillars* (ISel, RegAlloc, Scheduling) are interconnected
+3. *Register pressure* is the ultimate bottleneck
+4. *Profile with real hardware* (perf) - simulators can't see everything
+5. *TableGen* = declarative hardware description
+6. *TargetSubtarget* = source of truth for performance
 
-1.  Backend engineering = **hardware-software tradeoffs**
-2.  **Three Pillars** (ISel, RegAlloc, Scheduling) are interconnected
-3.  **Register pressure** is the ultimate bottleneck
-4.  **Profile with real hardware** (perf) - simulators can't see everything
-5.  **TableGen** = declarative hardware description
-6.  **TargetSubtarget** = source of truth for performance
+*Success requires:*
 
-**Success requires:**
+- Deep understanding of hardware AND software
+- Assembly reading fluency
+- Systematic debugging methodology
+- LLVM source code diving skills
+- Performance engineering mindset
 
--   Deep understanding of hardware AND software
--   Assembly reading fluency
--   Systematic debugging methodology
--   LLVM source code diving skills
--   Performance engineering mindset
+*Remember:* The best backend engineers understand the entire stack from silicon to software and optimize the bridge between them.
 
-**Remember:** The best backend engineers understand the entire stack from silicon to software and optimize the bridge between them.
+-----
 
----
+* Additional Resources
 
+** LLVM Core Documentation
 
-## Additional Resources {#additional-resources}
+- [[https://llvm.org/docs/CodeGenerator.html][LLVM Code Generator]]
+- [[https://llvm.org/docs/TableGen/index.html][TableGen Language Reference]]
+- [[https://llvm.org/docs/WritingAnLLVMBackend.html][Writing an LLVM Backend]]
+- [[https://llvm.org/docs/LangRef.html][LLVM Language Reference]]
 
+** RISC-V Resources
 
-### LLVM Core Documentation {#llvm-core-documentation}
+- [[https://riscv.org/][RISC-V Foundation]]
+- [[https://github.com/riscv][RISC-V Software Repository]]
+- [[https://github.com/riscv-collab/riscv-gnu-toolchain][RISC-V Toolchain Documentation]]
 
--   [LLVM Code Generator](https://llvm.org/docs/CodeGenerator.html)
--   [TableGen Language Reference](https://llvm.org/docs/TableGen/index.html)
--   [Writing an LLVM Backend](https://llvm.org/docs/WritingAnLLVMBackend.html)
--   [LLVM Language Reference](https://llvm.org/docs/LangRef.html)
+** Research Papers
 
+- "A Retargetable Compiler for ANSI C" - Fraser & Hanson
+- "Engineering a Compiler" - Cooper & Torczon
+- "Modern Compiler Implementation in C" - Appel
+- "Superoptimizer: A Look at the Smallest Program" - Massalin
 
-### RISC-V Resources {#risc-v-resources}
+** Source Code Study
 
--   [RISC-V Foundation](https://riscv.org/)
--   [RISC-V Software Repository](https://github.com/riscv)
--   [RISC-V Toolchain Documentation](https://github.com/riscv-collab/riscv-gnu-toolchain)
-
-
-### Research Papers {#research-papers}
-
--   "A Retargetable Compiler for ANSI C" - Fraser &amp; Hanson
--   "Engineering a Compiler" - Cooper &amp; Torczon
--   "Modern Compiler Implementation in C" - Appel
--   "Superoptimizer: A Look at the Smallest Program" - Massalin
-
-
-### Source Code Study {#source-code-study}
-
--   RISC-V Backend: `llvm/lib/Target/RISCV/`
--   CodeGen Infrastructure: `llvm/lib/CodeGen/`
--   Target-Independent SelectionDAG: `llvm/lib/CodeGen/SelectionDAG/`
--   Machine IR: `llvm/include/llvm/CodeGen/Machine*.h`
+- RISC-V Backend: ~llvm/lib/Target/RISCV/~
+- CodeGen Infrastructure: ~llvm/lib/CodeGen/~
+- Target-Independent SelectionDAG: ~llvm/lib/CodeGen/SelectionDAG/~
+- Machine IR: ~llvm/include/llvm/CodeGen/Machine*.h~
