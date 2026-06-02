@@ -3,9 +3,10 @@
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2025-11-22
 #+ZOLA_DRAFT: true
-#+ZOLA_TAXONOMIES_CATEGORIES: compiler-design
-#+ZOLA_TAXONOMIES_TAGS: instruction-selection register-allocation instruction-scheduling risc-v
+#+ZOLA_CATEGORIES: compiler-design
+#+ZOLA_TAGS: instruction-selection register-allocation instruction-scheduling risc-v
 #+ZOLA_SECTION: technical/compiler
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t))
 
 * [WIP] RISC-V Compiler Backend Complete Reference
 

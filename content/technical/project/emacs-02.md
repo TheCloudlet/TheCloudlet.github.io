@@ -5,6 +5,12 @@ description = "From von Neumann architecture to C struct memory layouts: underst
 date = 2026-03-05
 aliases = ["/blog/project/emacs-02/"]
 draft = false
+[taxonomies]
+  tags = ["lisp-object", "memory-layout", "c-macros", "tagged-pointer"]
+  categories = ["systems-programming"]
+[extra]
+  math = true
+  math_auto_render = true
 +++
 
 [8 bytes many meanings](/images/8-bytes-many-meanings.png)

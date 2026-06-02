@@ -52,19 +52,40 @@ lint_org() {
             lint_err "$org — @/ link found (use [[file:other.org][text]] instead)"
             echo "$at" | sed 's/^/     /'
         fi
+# Check for TITLE and DATE
+actual_title=$(grep "^#+TITLE:" "$org" 2>/dev/null | head -1 | sed 's/^#+TITLE: *//')
+if [ -z "$actual_title" ]; then
+    lint_err "$org — missing #+TITLE:"
+fi
+actual_date=$(grep "^#+DATE:" "$org" 2>/dev/null | head -1 | sed 's/^#+DATE: *//')
+if [ -z "$actual_date" ]; then
+    lint_err "$org — missing #+DATE:"
+fi
 
-        # Check #+ZOLA_SECTION matches the file's directory
-        if [ "$org" != "$CONTENT_DIR/about.org" ]; then
-            expected_section=$(dirname "$org" | sed "s|^$CONTENT_DIR/||")
-            actual_section=$(grep "^#+ZOLA_SECTION:" "$org" 2>/dev/null | head -1 | sed 's/^#+ZOLA_SECTION: *//')
-            if [ -z "$actual_section" ]; then
-                lint_err "$org — missing #+ZOLA_SECTION: (expected: $expected_section)"
-            elif [ "$actual_section" != "$expected_section" ]; then
-                lint_err "$org — ZOLA_SECTION mismatch (got: '$actual_section', expected: '$expected_section')"
-            fi
-        fi
+# Check #+ZOLA_SECTION matches the file's directory
+if [ "$org" != "$CONTENT_DIR/about.org" ]; then
+    expected_section=$(dirname "$org" | sed "s|^$CONTENT_DIR/||")
+    actual_section=$(grep "^#+ZOLA_SECTION:" "$org" 2>/dev/null | head -1 | sed 's/^#+ZOLA_SECTION: *//')
+    if [ -z "$actual_section" ]; then
+        lint_err "$org — missing #+ZOLA_SECTION: (expected: $expected_section)"
+    elif [ "$actual_section" != "$expected_section" ]; then
+        lint_err "$org — ZOLA_SECTION mismatch (got: '$actual_section', expected: '$expected_section')"
+    fi
+fi
 
-        # Cross-reference links pointing to .md files (should be file:*.org)
+# Skip draft content checks if it's a draft, but keep structural checks above
+grep -q "^#+ZOLA_DRAFT: true" "$org" 2>/dev/null && continue
+
+# Check for legacy TAXONOMIES keywords
+if grep -q "ZOLA_TAXONOMIES_" "$org"; then
+    lint_err "$org — legacy ZOLA_TAXONOMIES_ keyword (use ZOLA_TAGS/ZOLA_CATEGORIES)"
+fi
+
+# Check for unsupported EXTRA keywords
+if grep -q "ZOLA_EXTRA_" "$org"; then
+    lint_err "$org — unsupported ZOLA_EXTRA_ keyword (use ZOLA_CUSTOM_FRONT_MATTER)"
+fi
+
         bad_links=$(grep -n "\[\[.*\.md\]" "$org" 2>/dev/null | grep -v "@/" || true)
         if [ -n "$bad_links" ]; then
             lint_err "$org — .md cross-reference link (use [[file:other.org][text]] instead)"

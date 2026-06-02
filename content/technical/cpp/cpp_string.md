@@ -5,6 +5,9 @@ description = "A deep dive into C++ string internals—from C char types and enc
 date = 2025-11-20
 aliases = ["/blog/cpp/cpp_string/", "/blog/cpp/cpp-string/"]
 draft = false
+[taxonomies]
+  tags = ["std-string-view", "pmr-allocator", "small-string-optimization"]
+  categories = ["systems-programming"]
 +++
 
 ## Background {#background}

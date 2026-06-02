@@ -3,8 +3,8 @@
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2026-01-29
 #+ZOLA_ALIASES: /blog/project/stratum/
-#+ZOLA_TAXONOMIES_CATEGORIES: computer-architecture
-#+ZOLA_TAXONOMIES_TAGS: cache-hierarchy template-metaprogramming cache-simulator
+#+ZOLA_CATEGORIES: computer-architecture
+#+ZOLA_TAGS: cache-hierarchy template-metaprogramming cache-simulator
 #+ZOLA_SECTION: technical/project
 
 * The Interview That Changed Everything

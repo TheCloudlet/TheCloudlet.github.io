@@ -6,6 +6,12 @@ author = ["Yi-Ping Pan (Cloudlet)"]
 description = "What does a memory compiler actually do? From T-diagrams and 6T bitcells to GDS tiling, LVS, and the symmetry between memory compiler tiling and ML compiler tiling."
 date = 2026-05-29
 draft = false
+[taxonomies]
+  tags = ["memory-compiler", "sram", "eda", "layout-vs-schematic", "tiling"]
+  categories = ["compiler-design"]
+[extra]
+  math = true
+  math_auto_render = true
 +++
 
 > Most people see the name "memory compiler" and have no idea what it actually does.

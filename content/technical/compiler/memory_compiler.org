@@ -2,10 +2,9 @@
 #+DESCRIPTION: What does a memory compiler actually do? From T-diagrams and 6T bitcells to GDS tiling, LVS, and the symmetry between memory compiler tiling and ML compiler tiling.
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2026-05-29
-#+ZOLA_TAXONOMIES_CATEGORIES: compiler-design
-#+ZOLA_TAXONOMIES_TAGS: memory-compiler sram eda layout-vs-schematic tiling
-#+ZOLA_EXTRA_MATH: true
-#+ZOLA_EXTRA_MATH_AUTO_RENDER: true
+#+ZOLA_CATEGORIES: compiler-design
+#+ZOLA_TAGS: memory-compiler sram eda layout-vs-schematic tiling
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t))
 #+ZOLA_SECTION: technical/compiler
 
 #+BEGIN_QUOTE

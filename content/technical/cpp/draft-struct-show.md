@@ -4,6 +4,9 @@ author = ["Yi-Ping Pan (Cloudlet)"]
 description = "fixme"
 date = 2026-01-30
 draft = true
+[taxonomies]
+  tags = ["data-serialization", "debugging", "string-formatting"]
+  categories = ["systems-programming"]
 +++
 
 ## Structure thinking {#structure-thinking}

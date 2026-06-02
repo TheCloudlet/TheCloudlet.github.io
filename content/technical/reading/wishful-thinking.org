@@ -3,8 +3,8 @@
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2026-02-04
 #+ZOLA_ALIASES: /blog/reading/wishful-thinking/
-#+ZOLA_TAXONOMIES_CATEGORIES: software-architecture
-#+ZOLA_TAXONOMIES_TAGS: sicp-wishful-thinking lazy-evaluation abstraction-barrier
+#+ZOLA_CATEGORIES: software-architecture
+#+ZOLA_TAGS: sicp-wishful-thinking lazy-evaluation abstraction-barrier
 #+ZOLA_SECTION: technical/reading
 
 This is *not* a pure technical blog post. It is an attempt to connect engineering principles to real life.

@@ -5,6 +5,12 @@ description = "Why Emacs balances its property tree by total character count ins
 date = 2026-05-14
 aliases = ["/blog/project/emacs-04/"]
 draft = false
+[taxonomies]
+  tags = ["lisp-string", "interval-tree", "text-properties", "memory-layout"]
+  categories = ["systems-programming"]
+[extra]
+  math = true
+  math_auto_render = true
 +++
 
 It has been a while since my last update. Recently, I lost my job and stepped into the undefined space of looking for the next one. I didn't expect the friction of this state change to be so mentally taxing, but I'll try to [keep the blue side up](https://www.urbandictionary.com/define.php?term=Keep+the+blue+side+up%21)—observing the turbulence without fighting it too hard.

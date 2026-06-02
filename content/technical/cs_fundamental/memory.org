@@ -3,8 +3,8 @@
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2025-12-07
 #+ZOLA_DRAFT: true
-#+ZOLA_TAXONOMIES_CATEGORIES: computer-architecture
-#+ZOLA_TAXONOMIES_TAGS: virtual-memory cpu-cache translation-lookaside-buffer page-table
+#+ZOLA_CATEGORIES: computer-architecture
+#+ZOLA_TAGS: virtual-memory cpu-cache translation-lookaside-buffer page-table
 #+ZOLA_SECTION: technical/cs_fundamental
 
 * Memory Systems Interview Prep

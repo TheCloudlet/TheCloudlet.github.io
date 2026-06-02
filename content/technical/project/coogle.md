@@ -5,6 +5,11 @@ description = "Building a type signature search engine for C++ inspired by Haske
 date = 2025-12-02
 aliases = ["/blog/project/coogle/"]
 draft = false
+[taxonomies]
+  tags = ["ast-parsing", "libclang", "string-interning", "type-canonicalization"]
+  categories = ["software-tooling"]
+[extra]
+  math = true
 +++
 
 ## Why I Started This Project? {#why-i-started-this-project}

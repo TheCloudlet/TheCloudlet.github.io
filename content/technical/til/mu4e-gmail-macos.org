@@ -2,8 +2,8 @@
 #+DESCRIPTION: Setting up mu4e + mbsync with Gmail App Password on macOS — no OAuth2
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2026-05-27
-#+ZOLA_TAXONOMIES_CATEGORIES: software-tooling
-#+ZOLA_TAXONOMIES_TAGS: emacs mu4e mbsync gmail macos
+#+ZOLA_CATEGORIES: software-tooling
+#+ZOLA_TAGS: emacs mu4e mbsync gmail macos
 #+ZOLA_SECTION: technical/til
 
 #+BEGIN_QUOTE

@@ -3,10 +3,9 @@
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2026-03-12
 #+ZOLA_ALIASES: /blog/project/emacs-03/
-#+ZOLA_TAXONOMIES_CATEGORIES: systems-programming
-#+ZOLA_TAXONOMIES_TAGS: tagged-pointer fat-pointer custom-rtti struct-embedding
-#+ZOLA_EXTRA_MATH: true
-#+ZOLA_EXTRA_MATH_AUTO_RENDER: true
+#+ZOLA_CATEGORIES: systems-programming
+#+ZOLA_TAGS: tagged-pointer fat-pointer custom-rtti struct-embedding
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t))
 #+ZOLA_SECTION: technical/project
 
 #+BEGIN_QUOTE

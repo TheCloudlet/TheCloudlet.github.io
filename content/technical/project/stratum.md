@@ -5,6 +5,9 @@ description = "Using Lisp to manage complexity in high-performance memory modeli
 date = 2026-01-29
 aliases = ["/blog/project/stratum/"]
 draft = false
+[taxonomies]
+  tags = ["cache-hierarchy", "template-metaprogramming", "cache-simulator"]
+  categories = ["computer-architecture"]
 +++
 
 ## The Interview That Changed Everything {#the-interview-that-changed-everything}

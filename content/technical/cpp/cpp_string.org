@@ -4,8 +4,8 @@
 #+DATE: 2025-11-20
 #+ZOLA_ALIASES: /blog/cpp/cpp_string/
 #+ZOLA_ALIASES: /blog/cpp/cpp-string/
-#+ZOLA_TAXONOMIES_CATEGORIES: systems-programming
-#+ZOLA_TAXONOMIES_TAGS: std-string-view pmr-allocator small-string-optimization
+#+ZOLA_CATEGORIES: systems-programming
+#+ZOLA_TAGS: std-string-view pmr-allocator small-string-optimization
 #+ZOLA_SECTION: technical/cpp
 
 * Background

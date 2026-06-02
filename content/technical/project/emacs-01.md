@@ -5,6 +5,9 @@ description = "Exploring why GNU Emacs embeds a Lisp interpreter in C -- from TE
 date = 2026-02-26
 aliases = ["/blog/project/emacs-01/"]
 draft = false
+[taxonomies]
+  tags = ["lisp-interpreter", "teco-macros", "mccarthy-axioms", "greenspun-tenth-rule"]
+  categories = ["systems-programming"]
 +++
 
 I tried to move to an LLM-friendly platform like VSCode or Cursor, but I kept returning to GNU Emacs. After reading other users' stories, I realized this is a common pattern. Very few tools survive 40 years and still feel hard to leave.

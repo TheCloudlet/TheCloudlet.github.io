@@ -3,6 +3,12 @@ title = "Plane Spotting, Non-Euclidean Geometry, and Cultural Runtimes"
 author = ["Yi-Ping Pan (Cloudlet)"]
 date = 2026-03-19
 draft = false
+[taxonomies]
+  tags = ["murmur"]
+  categories = ["murmur"]
+[extra]
+  math = true
+  math_auto_render = true
 +++
 
 [Plane spotting at the airport](/images/2026-03-19-plane.jpg)

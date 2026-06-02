@@ -3,10 +3,9 @@
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2026-05-14
 #+ZOLA_ALIASES: /blog/project/emacs-04/
-#+ZOLA_TAXONOMIES_CATEGORIES: systems-programming
-#+ZOLA_TAXONOMIES_TAGS: lisp-string interval-tree text-properties memory-layout
-#+ZOLA_EXTRA_MATH: true
-#+ZOLA_EXTRA_MATH_AUTO_RENDER: true
+#+ZOLA_CATEGORIES: systems-programming
+#+ZOLA_TAGS: lisp-string interval-tree text-properties memory-layout
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t))
 #+ZOLA_SECTION: technical/project
 
 It has been a while since my last update. Recently, I lost my job and stepped into the undefined space of looking for the next one. I didn't expect the friction of this state change to be so mentally taxing, but I'll try to [[https://www.urbandictionary.com/define.php?term=Keep+the+blue+side+up%21][keep the blue side up]]—observing the turbulence without fighting it too hard.

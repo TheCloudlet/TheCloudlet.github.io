@@ -1,7 +1,13 @@
-#+TITLE: About: Yi-Ping Pan (Cloudlet)
-#+DATE: 2026-01-01
-#+ZOLA_TEMPLATE: page.html
-#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((hide_from_list . t) (toc . nil) (hide_meta . t))
++++
+template = "page.html"
+title = "About: Yi-Ping Pan (Cloudlet)"
+author = ["潘奕平"]
+date = 2026-01-01
+draft = false
+[extra]
+  hide_from_list = true
+  hide_meta = true
++++
 
 Yi-Ping Pan is a software engineer with a deep interest in compilers, systems programming, and functional programming. He has worked on projects spanning compiler infrastructure (LLVM, MLIR), low-level systems in C++, and exploring the elegance of Haskell and functional paradigms.
 
@@ -9,4 +15,4 @@ He has contributed to open-source tooling and enjoys thinking about the intersec
 
 Outside of engineering, he writes, tinkers with Emacs configurations, and occasionally gets lost in a good book.
 
-He can be reached at [[mailto:yipingp@outlook.com][yipingp@outlook.com]], or found on [[https://github.com/TheCloudlet][GitHub]] and [[https://linkedin.com/in/yipingpan][LinkedIn]].
+He can be reached at [yipingp@outlook.com](mailto:yipingp@outlook.com), or found on [GitHub](https://github.com/TheCloudlet) and [LinkedIn](https://linkedin.com/in/yipingpan).

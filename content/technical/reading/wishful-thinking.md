@@ -5,6 +5,9 @@ description = "A practical exploration of SICP's wishful thinking as a design pr
 date = 2026-02-04
 aliases = ["/blog/reading/wishful-thinking/"]
 draft = false
+[taxonomies]
+  tags = ["sicp-wishful-thinking", "lazy-evaluation", "abstraction-barrier"]
+  categories = ["software-architecture"]
 +++
 
 This is **not** a pure technical blog post. It is an attempt to connect engineering principles to real life.

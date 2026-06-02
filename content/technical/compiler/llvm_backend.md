@@ -4,6 +4,11 @@ author = ["Yi-Ping Pan (Cloudlet)"]
 description = "A comprehensive guide covering instruction selection, register allocation, and instruction scheduling for LLVM backend engineers"
 date = 2025-11-22
 draft = true
+[taxonomies]
+  tags = ["instruction-selection", "register-allocation", "instruction-scheduling", "risc-v"]
+  categories = ["compiler-design"]
+[extra]
+  math = true
 +++
 
 ## [WIP] RISC-V Compiler Backend Complete Reference {#wip-risc-v-compiler-backend-complete-reference}

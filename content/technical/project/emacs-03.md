@@ -5,6 +5,12 @@ description = "Implementing dynamic typing in statically-typed systems: explorin
 date = 2026-03-12
 aliases = ["/blog/project/emacs-03/"]
 draft = false
+[taxonomies]
+  tags = ["tagged-pointer", "fat-pointer", "custom-rtti", "struct-embedding"]
+  categories = ["systems-programming"]
+[extra]
+  math = true
+  math_auto_render = true
 +++
 
 > **[Update 2026-03-17]**

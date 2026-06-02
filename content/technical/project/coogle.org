@@ -3,9 +3,10 @@
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2025-12-02
 #+ZOLA_ALIASES: /blog/project/coogle/
-#+ZOLA_TAXONOMIES_CATEGORIES: software-tooling
-#+ZOLA_TAXONOMIES_TAGS: ast-parsing libclang string-interning type-canonicalization
+#+ZOLA_CATEGORIES: software-tooling
+#+ZOLA_TAGS: ast-parsing libclang string-interning type-canonicalization
 #+ZOLA_SECTION: technical/project
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t))
 
 * Why I Started This Project?
 

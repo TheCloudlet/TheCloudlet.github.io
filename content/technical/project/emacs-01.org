@@ -3,8 +3,8 @@
 #+AUTHOR: Cloudet (Yi-Ping Pan)
 #+DATE: 2026-02-26
 #+ZOLA_ALIASES: /blog/project/emacs-01/
-#+ZOLA_TAXONOMIES_CATEGORIES: systems-programming
-#+ZOLA_TAXONOMIES_TAGS: lisp-interpreter teco-macros mccarthy-axioms greenspun-tenth-rule
+#+ZOLA_CATEGORIES: systems-programming
+#+ZOLA_TAGS: lisp-interpreter teco-macros mccarthy-axioms greenspun-tenth-rule
 #+ZOLA_SECTION: technical/project
 
 I tried to move to an LLM-friendly platform like VSCode or Cursor, but I kept returning to GNU Emacs. After reading other users' stories, I realized this is a common pattern. Very few tools survive 40 years and still feel hard to leave.

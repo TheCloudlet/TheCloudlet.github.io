@@ -4,6 +4,9 @@ author = ["Yi-Ping Pan (Cloudlet)"]
 description = "Setting up mu4e + mbsync with Gmail App Password on macOS — no OAuth2"
 date = 2026-05-27
 draft = false
+[taxonomies]
+  tags = ["emacs", "mu4e", "mbsync", "gmail", "macos"]
+  categories = ["software-tooling"]
 +++
 
 > I like writing email in plain text and I wanted to read email without leaving Emacs.
