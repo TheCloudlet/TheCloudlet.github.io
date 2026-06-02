@@ -3,7 +3,7 @@ title = "Back to Basics: From C char to string_view (Notes from building Coogle)
 author = ["Yi-Ping Pan (Cloudlet)"]
 description = "A deep dive into C++ string internals—from C char types and encoding chaos to std::string, SSO optimization, string_view, and PMR allocators"
 date = 2025-11-20
-aliases = ["/blog/cpp/cpp_string/", "/blog/cpp/cpp-string/"]
+aliases = ["/blog/cpp/cpp-string/"]
 draft = false
 [taxonomies]
   tags = ["std-string-view", "pmr-allocator", "small-string-optimization"]

@@ -3,7 +3,7 @@ title = "Emacs Internal #03: Tagged Union, Tagged Pointer, and Poor Man's Inheri
 author = ["Yi-Ping Pan (Cloudlet)"]
 description = "Implementing dynamic typing in statically-typed systems: exploring Tagged Unions, Fat Pointers, Emacs's Tagged Pointers, and Struct Embedding."
 date = 2026-03-12
-aliases = ["/blog/project/emacs-03/"]
+aliases = ["/technical/project/emacs-03/", "/blog/project/emacs-03/"]
 draft = false
 [taxonomies]
   tags = ["tagged-pointer", "fat-pointer", "custom-rtti", "struct-embedding"]
@@ -24,7 +24,7 @@ draft = false
 
 ## Recap {#recap}
 
-From the [previous article](@/technical/project/emacs-02.md), we examined how GNU Emacs represents every Lisp value — integers, symbols, cons cells, strings, buffers — inside a single 64-bit slot called `Lisp_Object`. Because all heap objects are 8-byte aligned and the lowest 3 bits of any valid pointer are always zero, Emacs reclaims these "free" bits and uses them as a type tag.
+From the [previous article](@/technical/emacs/emacs-02.md), we examined how GNU Emacs represents every Lisp value — integers, symbols, cons cells, strings, buffers — inside a single 64-bit slot called `Lisp_Object`. Because all heap objects are 8-byte aligned and the lowest 3 bits of any valid pointer are always zero, Emacs reclaims these "free" bits and uses them as a type tag.
 
 The more fundamental question is: **when a single variable must hold values of different types at runtime, how do we preserve enough information to use that data correctly?**
 
@@ -453,7 +453,7 @@ Looking into the weird `Lisp_String` object... there is an interval tree in it.
 
 Emacs Internal Series:
 
--   \#01: [Emacs is a Lisp Runtime in C, Not an Editor](@/technical/project/emacs-01.md)
--   \#02: [Data First — Deconstructing Lisp_Object in C](@/technical/project/emacs-02.md)
+-   \#01: [Emacs is a Lisp Runtime in C, Not an Editor](@/technical/emacs/emacs-01.md)
+-   \#02: [Data First — Deconstructing Lisp_Object in C](@/technical/emacs/emacs-02.md)
 -   \#03: Tagged Union, Tagged Pointer, and Poor Man's Inheritance
--   \#04: [Interval Trees — Balancing by Text Length, Not Node Count](@/technical/project/emacs-04.md)
+-   \#04: [Interval Trees — Balancing by Text Length, Not Node Count](@/technical/emacs/emacs-04.md)

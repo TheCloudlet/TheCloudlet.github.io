@@ -3,7 +3,7 @@ title = "Emacs Internal #01: is a Lisp Runtime in C, Not an Editor"
 author = ["Cloudet (Yi-Ping Pan)"]
 description = "Exploring why GNU Emacs embeds a Lisp interpreter in C -- from TECO marcos to Greenspun's Tenth Rule, with architecture comparisons to Neovim and VSCode"
 date = 2026-02-26
-aliases = ["/blog/project/emacs-01/"]
+aliases = ["/technical/project/emacs-01/", "/blog/project/emacs-01/"]
 draft = false
 [taxonomies]
   tags = ["lisp-interpreter", "teco-macros", "mccarthy-axioms", "greenspun-tenth-rule"]
@@ -123,6 +123,6 @@ B. How `Lisp_Object` works?
 Emacs Internal Series:
 
 -   \#01: Emacs is a Lisp Runtime in C, Not an Editor
--   \#02: [Data First — Deconstructing Lisp_Object in C](@/technical/project/emacs-02.md)
--   \#03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/technical/project/emacs-03.md)
--   \#04: [Interval Trees — Balancing by Text Length, Not Node Count](@/technical/project/emacs-04.md)
+-   \#02: [Data First — Deconstructing Lisp_Object in C](@/technical/emacs/emacs-02.md)
+-   \#03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/technical/emacs/emacs-03.md)
+-   \#04: [Interval Trees — Balancing by Text Length, Not Node Count](@/technical/emacs/emacs-04.md)

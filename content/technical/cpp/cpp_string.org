@@ -2,7 +2,6 @@
 #+DESCRIPTION: A deep dive into C++ string internals—from C char types and encoding chaos to std::string, SSO optimization, string_view, and PMR allocators
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2025-11-20
-#+ZOLA_ALIASES: /blog/cpp/cpp_string/
 #+ZOLA_ALIASES: /blog/cpp/cpp-string/
 #+ZOLA_CATEGORIES: systems-programming
 #+ZOLA_TAGS: std-string-view pmr-allocator small-string-optimization

@@ -62,16 +62,19 @@ if [ -z "$actual_date" ]; then
     lint_err "$org — missing #+DATE:"
 fi
 
-# Check #+ZOLA_SECTION matches the file's directory
-if [ "$org" != "$CONTENT_DIR/about.org" ]; then
-    expected_section=$(dirname "$org" | sed "s|^$CONTENT_DIR/||")
-    actual_section=$(grep "^#+ZOLA_SECTION:" "$org" 2>/dev/null | head -1 | sed 's/^#+ZOLA_SECTION: *//')
-    if [ -z "$actual_section" ]; then
-        lint_err "$org — missing #+ZOLA_SECTION: (expected: $expected_section)"
-    elif [ "$actual_section" != "$expected_section" ]; then
-        lint_err "$org — ZOLA_SECTION mismatch (got: '$actual_section', expected: '$expected_section')"
-    fi
-fi
+        # Check #+ZOLA_SECTION matches the file's directory (and is NOT "posts")
+        if [ "$org" != "$CONTENT_DIR/about.org" ]; then
+            expected_section=$(dirname "$org" | sed "s|^$CONTENT_DIR/||")
+            actual_section=$(grep "^#+ZOLA_SECTION:" "$org" 2>/dev/null | head -1 | sed 's/^#+ZOLA_SECTION: *//')
+            
+            if [ -z "$actual_section" ]; then
+                lint_err "$org — missing #+ZOLA_SECTION: (expected: $expected_section)"
+            elif [ "$actual_section" = "posts" ]; then
+                lint_err "$org — ZOLA_SECTION cannot be 'posts'. Please choose a real category."
+            elif [ "$actual_section" != "$expected_section" ]; then
+                lint_err "$org — ZOLA_SECTION mismatch (got: '$actual_section', expected: '$expected_section')"
+            fi
+        fi
 
 # Skip draft content checks if it's a draft, but keep structural checks above
 grep -q "^#+ZOLA_DRAFT: true" "$org" 2>/dev/null && continue
@@ -125,6 +128,22 @@ export_org() {
 check_md() {
     log "Step 3: Checking generated .md files"
 
+    # --- Integrity Check: No orphaned markdown or 'posts' directory ---
+    for md in $(find "$CONTENT_DIR" -name "*.md" | sort); do
+        [[ "$md" == *"_index.md" ]] && continue
+
+        # Explicitly forbid 'posts' directory
+        if [[ "$md" == *"/posts/"* ]]; then
+            err "$md — forbidden directory 'posts'. All content must be categorized."
+            continue
+        fi
+
+        org="${md%.md}.org"
+        if [ ! -f "$org" ]; then
+            err "$md — orphaned markdown (missing .org source)"
+        fi
+    done
+
     for org in $(find "$CONTENT_DIR" -name "*.org" | sort); do
         grep -q "^#+ZOLA_DRAFT: true" "$org" 2>/dev/null && continue
 
@@ -136,10 +155,8 @@ check_md() {
             continue
         fi
 
-        # md must be newer than org (skip about.md — exports to non-standard path)
-        if [ "$org" = "content/about.org" ]; then
-            ok "$md (about — skipping staleness check)"
-        elif [ "$org" -nt "$md" ]; then
+        # md must be newer than org
+        if [ "$org" -nt "$md" ]; then
             err "$md — stale (.org is newer, export may have failed)"
         else
             ok "$md"

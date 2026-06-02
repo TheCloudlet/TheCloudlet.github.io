@@ -2,11 +2,12 @@
 #+DESCRIPTION: From von Neumann architecture to C struct memory layouts: understanding the core data representation of Emacs Lisp.
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2026-03-05
+#+ZOLA_ALIASES: /technical/project/emacs-02/
 #+ZOLA_ALIASES: /blog/project/emacs-02/
 #+ZOLA_CATEGORIES: systems-programming
 #+ZOLA_TAGS: lisp-object memory-layout c-macros tagged-pointer
 #+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t))
-#+ZOLA_SECTION: technical/project
+#+ZOLA_SECTION: technical/emacs
 
 [[/images/8-bytes-many-meanings.png][8 bytes many meanings]]
 

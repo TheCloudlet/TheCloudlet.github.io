@@ -3,7 +3,7 @@ title = "Emacs Internal #04: Interval Trees — Balancing by Text Length, Not No
 author = ["Yi-Ping Pan (Cloudlet)"]
 description = "Why Emacs balances its property tree by total character count instead of node depth—a weight-balanced design that yields to the physical reality of text editing."
 date = 2026-05-14
-aliases = ["/blog/project/emacs-04/"]
+aliases = ["/technical/project/emacs-04/", "/blog/project/emacs-04/"]
 draft = false
 [taxonomies]
   tags = ["lisp-string", "interval-tree", "text-properties", "memory-layout"]
@@ -601,9 +601,9 @@ There are two threads left deliberately unresolved. The first is the contrasting
 
 Emacs Internal Series:
 
--   \#01: [Emacs is a Lisp Runtime in C, Not an Editor](@/technical/project/emacs-01.md)
--   \#02: [Data First — Deconstructing Lisp_Object in C](@/technical/project/emacs-02.md)
--   \#03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/technical/project/emacs-03.md)
+-   \#01: [Emacs is a Lisp Runtime in C, Not an Editor](@/technical/emacs/emacs-01.md)
+-   \#02: [Data First — Deconstructing Lisp_Object in C](@/technical/emacs/emacs-02.md)
+-   \#03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/technical/emacs/emacs-03.md)
 -   \#04: Interval Trees — Balancing by Text Length, Not Node Count
 
 ---

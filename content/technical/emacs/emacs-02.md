@@ -3,7 +3,7 @@ title = "Emacs Internal #02: Data First — Deconstructing Lisp_Object in C"
 author = ["Yi-Ping Pan (Cloudlet)"]
 description = "From von Neumann architecture to C struct memory layouts: understanding the core data representation of Emacs Lisp."
 date = 2026-03-05
-aliases = ["/blog/project/emacs-02/"]
+aliases = ["/technical/project/emacs-02/", "/blog/project/emacs-02/"]
 draft = false
 [taxonomies]
   tags = ["lisp-object", "memory-layout", "c-macros", "tagged-pointer"]
@@ -19,7 +19,7 @@ draft = false
 
 In the first part of this GNU Emacs series, I focused on the history and explains why there is a Lisp interpreter embedded inside a text editor. Before diving into this part, I recommend reading the previous post:
 
-[Emacs Internal #01: Emacs is a Lisp Runtime in C, Not an Editor](@/technical/project/emacs-01.md)
+[Emacs Internal #01: Emacs is a Lisp Runtime in C, Not an Editor](@/technical/emacs/emacs-01.md)
 
 In this post, I want to look at GNU Emacs from a higher system-design perspective.
 
@@ -294,7 +294,7 @@ In the next post, we will look at how GNU Emacs expands this layout using a tech
 
 Emacs Internal Series:
 
--   \#01: [Emacs is a Lisp Runtime in C, Not an Editor](@/technical/project/emacs-01.md)
+-   \#01: [Emacs is a Lisp Runtime in C, Not an Editor](@/technical/emacs/emacs-01.md)
 -   \#02: Data First — Deconstructing Lisp_Object in C
--   \#03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/technical/project/emacs-03.md)
--   \#04: [Interval Trees — Balancing by Text Length, Not Node Count](@/technical/project/emacs-04.md)
+-   \#03: [Tagged Union, Tagged Pointer, and Poor Man's Inheritance](@/technical/emacs/emacs-03.md)
+-   \#04: [Interval Trees — Balancing by Text Length, Not Node Count](@/technical/emacs/emacs-04.md)
