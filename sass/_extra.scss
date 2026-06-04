@@ -200,6 +200,14 @@ pre {
     color: inherit !important;
     padding: 0;
     border: none;
+    white-space: pre !important; // Force preservation of all whitespace/newlines
+
+    // Fix for collapsed empty lines in some highlighters
+    span:empty::before {
+      content: " ";
+      display: inline-block;
+      width: 0;
+    }
 
     // Fix highlight line styling for Zola/Abridge (hl_lines)
     mark {
