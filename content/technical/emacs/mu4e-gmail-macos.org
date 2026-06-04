@@ -4,7 +4,8 @@
 #+DATE: 2026-05-27
 #+ZOLA_CATEGORIES: software-tooling
 #+ZOLA_TAGS: emacs mu4e mbsync gmail macos
-#+ZOLA_SECTION: technical/til
+#+ZOLA_SECTION: technical/emacs
+#+ZOLA_ALIASES: /technical/til/mu4e-gmail-macos/
 
 #+BEGIN_QUOTE
 I like writing email in plain text and I wanted to read email without leaving Emacs.

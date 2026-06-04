@@ -3,6 +3,7 @@ title = "TIL: Reading Gmail in Emacs with mu4e on macOS"
 author = ["Yi-Ping Pan (Cloudlet)"]
 description = "Setting up mu4e + mbsync with Gmail App Password on macOS — no OAuth2"
 date = 2026-05-27
+aliases = ["/technical/til/mu4e-gmail-macos/"]
 draft = false
 [taxonomies]
   tags = ["emacs", "mu4e", "mbsync", "gmail", "macos"]
