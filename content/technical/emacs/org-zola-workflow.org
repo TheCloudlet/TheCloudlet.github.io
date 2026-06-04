@@ -1,0 +1,278 @@
+#+TITLE: Migrating a Zola blog from Markdown to Org-mode — with a lint/export/check pipeline to keep them in sync
+#+DESCRIPTION: How I migrated 15 articles from Markdown to Org-mode and built a lint/export/check pipeline to enforce sync between .org sources and generated .md files.
+#+AUTHOR: Yi-Ping Pan (Cloudlet)
+#+DATE: 2026-06-04
+#+ZOLA_DRAFT: false
+#+ZOLA_SECTION: technical/emacs
+#+ZOLA_CATEGORIES: software-tooling
+#+ZOLA_TAGS: emacs org-mode zola ox-zola blog-workflow
+
+For the first year, I wrote in Markdown. The reasons were practical: [[https://www.getzola.org/][Zola]] reads Markdown natively, and I was not sure I would keep writing long enough to justify setting up a more elaborate workflow.
+
+Fifteen articles later, I am still writing. The friction of editing ~.md~ files in Emacs — jumping between Markdown conventions and Org muscle memory — became annoying enough to act on. So I migrated everything to Org-mode.
+
+[[https://github.com/gicrisf/ox-zola][ox-zola]] bridges the syntax gap by exporting ~.org~ files to Zola-compatible Markdown. However, the architectural problem is state synchronization: ensuring the generated ~.md~ files continuously match the ~.org~ sources without manual intervention.
+
+This note documents the linting and export pipeline built to enforce this synchronization.
+
+-----
+
+* Why Org-mode Over Markdown
+
+I think Org-mode is easier to read for me than markdown in Emacs:
+
+** 1. Outline Navigation
+
+Markdown has no native outline. A long article looks like this as plain text:
+
+#+BEGIN_EXAMPLE
+## Section One
+
+...50 lines...
+
+### Subsection
+
+...50 lines...
+
+## Section Two
+#+END_EXAMPLE
+
+In Org-mode, ~TAB~ on any heading collapses or expands it. ~S-TAB~ toggles the entire buffer. Jumping between sections in a 400-line article takes one keystroke instead of scrolling.
+
+** 2. Code Block Delimiters
+
+Markdown uses backtick fences that visually blend into surrounding text:
+
+#+BEGIN_EXAMPLE
+Some prose here.
+
+```cpp
+int main() { return 0; }
+```
+
+More prose here.
+#+END_EXAMPLE
+
+Org uses ~#+BEGIN_SRC~ / ~#+END_SRC~ which stand out clearly in a monospace font:
+
+#+BEGIN_EXAMPLE
+Some prose here.
+
+#+BEGIN_SRC cpp
+int main() { return 0; }
+#+END_SRC
+
+More prose here.
+#+END_EXAMPLE
+
+Once an article passes a few hundred lines, restructuring headers in Markdown means scrolling. In Org, folding makes it a non-issue.
+
+** 3. Link Display Toggle
+
+In Markdown, a link always shows its full syntax:
+
+#+BEGIN_EXAMPLE
+[some text](https://very-long-url-that-takes-up-space.com/path/to/page)
+#+END_EXAMPLE
+
+In Org-mode, links render the description by default. When you need to see or edit the URL, toggle with a small helper function:
+
+#+BEGIN_SRC elisp
+(defun cloudlet/org-toggle-link-display ()
+  "Toggle the literal or descriptive display of links."
+  (interactive)
+  (if org-link-descriptive
+      (progn (remove-from-invisibility-spec '(org-link))
+             (org-restart-font-lock)
+             (setq org-link-descriptive nil))
+    (progn (add-to-invisibility-spec '(org-link))
+           (org-restart-font-lock)
+           (setq org-link-descriptive t))))
+#+END_SRC
+
+The URL stays hidden until I need it — which, when writing, is almost never.
+
+* Setting Up ox-zola
+
+ox-zola is an Org exporter that outputs Zola-compatible Markdown, TOML frontmatter included. It builds on top of ox-hugo.
+
+In Doom Emacs, add to ~packages.el~:
+
+#+BEGIN_SRC elisp
+(package! ox-zola
+  :recipe (:host github :repo "gicrisf/ox-zola"))
+#+END_SRC
+
+And in ~config.el~:
+
+#+BEGIN_SRC elisp
+(use-package! ox-zola
+  :after org
+  :config
+  (setq ox-zola-base-dir "~/path/to/your/site")
+  (setq org-export-use-babel nil)
+  (setq org-export-with-broken-links t))
+#+END_SRC
+
+~org-export-use-babel nil~ prevents Emacs from trying to execute code blocks during export. ~org-export-with-broken-links t~ lets export continue even if some links cannot be resolved locally.
+
+** Frontmatter Keywords
+
+ox-zola reads ~#+KEYWORD:~ lines at the top of the file. The ones I use:
+
+To automate frontmatter generation, use a yasnippet template at ~$DOOMDIR/snippets/org-mode/zola~:
+
+#+BEGIN_EXAMPLE
+# -*- mode: snippet -*-
+# name: zola
+# key: >zola
+# --
+#+TITLE: ${1:Title}
+#+DESCRIPTION: ${2:Description}
+#+AUTHOR: Yi-Ping Pan (Cloudlet)
+#+DATE: `(format-time-string "%Y-%m-%d")`
+#+ZOLA_DRAFT: ${3:true}
+#+ZOLA_SECTION: ${4:technical/project}
+#+ZOLA_CATEGORIES: ${5:category}
+#+ZOLA_TAGS: ${6:tags}
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . ${7:nil}))
+
+$0
+#+END_EXAMPLE
+
+Type ~>zola~ and press ~TAB~ to expand. Tab stops walk through title, description, section, and the rest.
+
+#+BEGIN_EXAMPLE
+#+TITLE: Article Title
+#+DESCRIPTION: One-line summary
+#+AUTHOR: Yi-Ping Pan (Cloudlet)
+#+DATE: 2026-06-04
+#+ZOLA_DRAFT: true
+#+ZOLA_SECTION: technical/project
+#+ZOLA_CATEGORIES: systems-programming
+#+ZOLA_TAGS: emacs org-mode
+#+END_EXAMPLE
+
+A few things I got wrong the first time:
+
+- ~#+ZOLA_TAXONOMIES_CATEGORIES:~ does not exist. The correct keyword is ~#+ZOLA_CATEGORIES:~.
+- Tags are space-separated, not comma-separated.
+- ~#+ZOLA_SECTION:~ must match the actual directory path under ~content/~, or ox-zola will output the file to ~content/posts/~ by default.
+- ~#+ZOLA_EXTRA_MATH: true~ does nothing. The ~ZOLA_EXTRA_~ namespace is not recognized by ox-zola. To enable KaTeX rendering, use ~#+ZOLA_CUSTOM_FRONT_MATTER~ instead:
+
+#+BEGIN_EXAMPLE
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t))
+#+END_EXAMPLE
+
+Without this, ~$...$~ and ~$$...$$~ blocks export correctly as text but KaTeX never renders them in the browser.
+
+** Cross-references Between Articles
+
+Zola uses ~@/section/article.md~ for internal links. Org cannot resolve these at export time, which causes the export to abort.
+
+The fix is to use ~file:~ links pointing to the ~.org~ source file. ox-zola will resolve the path relative to the ~base-dir~ and emit the correct ~@/~ syntax:
+
+#+BEGIN_SRC org
+[[file:emacs-01.org][Emacs Internal #01]]
+#+END_SRC
+
+Becomes:
+
+#+BEGIN_SRC markdown
+[Emacs Internal #01](@/technical/emacs/emacs-01.md)
+#+END_SRC
+
+** Images
+
+Bare image links without alt text get converted to Hugo ~figure~ shortcodes, which Zola does not understand:
+
+#+BEGIN_SRC org
+;; Wrong — becomes {​{ figure(src="...") }​}
+[[/images/screenshot.png]]
+
+;; Correct — becomes ![alt](/images/screenshot.png)
+[[/images/screenshot.png][Screenshot description]]
+#+END_SRC
+
+Always include alt text.
+
+-----
+
+* The Pipeline: build-org.sh
+
+To enforce export consistency, ~scripts/build-org.sh~ wraps the export process in a strict lint-export-check sequence.
+
+** Step 1: Lint
+
+Before exporting, check every ~.org~ file for common mistakes:
+
+- Bare image links (no alt text)
+- ~@/~ links that Org cannot resolve
+- ~#+ZOLA_SECTION:~ missing or not matching the file's directory
+- ~.md~ cross-reference links (should be ~file:*.org~ instead)
+- Indented headings inside code blocks (false positives filtered with awk)
+
+Draft files (~#+ZOLA_DRAFT: true~) are skipped entirely.
+
+If any lint check fails, the pipeline stops. Export only runs on clean files.
+
+** Step 2: Export
+
+Batch export using Emacs in ~--batch~ mode:
+
+#+BEGIN_SRC bash
+emacs --batch --load scripts/org-export.el
+#+END_SRC
+
+The ~org-export.el~ script loads the full straight.el build directory so ox-zola and ox-hugo are available without loading Doom's ~init.el~ (which does not work in batch mode).
+
+Draft files are skipped by default. Pass ~--drafts~ to include them for local preview:
+
+#+BEGIN_SRC bash
+./scripts/build-org.sh --drafts
+#+END_SRC
+
+** Step 3: Check
+
+After export, verify:
+
+- Every ~.org~ has a corresponding ~.md~ that is newer
+- No Hugo ~figure~ shortcodes leaked into the output
+- No raw ~@/~ links in the generated Markdown
+
+** Git Hooks
+
+A pre-commit hook blocks commits if any ~.org~ is newer than its ~.md~ (skipping drafts and ~about.org~). A pre-push hook runs the full pipeline before pushing to origin.
+
+#+BEGIN_SRC bash
+# .git/hooks/pre-push
+cd "$(git rev-parse --show-toplevel)"
+./scripts/build-org.sh
+#+END_SRC
+
+-----
+
+* The File Structure
+
+#+BEGIN_EXAMPLE
+content/
+  technical/
+    emacs/
+      emacs-01.org    ← source, edit this
+      emacs-01.md     ← generated, do not edit manually
+      emacs-02.org
+      emacs-02.md
+scripts/
+  build-org.sh        ← lint + export + check
+  org-export.el       ← batch export script
+#+END_EXAMPLE
+
+~.md~ files are committed to the repository because Zola's GitHub Actions CI reads them directly. The ~.org~ files are the source of truth; the ~.md~ files are derived output.
+
+-----
+
+* Result
+
+The ~.org~ file is now the strict single source of truth. The ~.md~ file is treated entirely as a compiled build artifact.
+
+By binding ~scripts/build-org.sh~ to the Git pre-push hook, the state synchronization problem is eliminated at the system level. If the pipeline returns 0, the Markdown artifacts are guaranteed to be in sync with the Org sources. ~git push~ simply acts as the deployment trigger for the clean artifacts.
