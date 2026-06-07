@@ -174,7 +174,7 @@ Instead of a traditional OOP design with virtual methods and polymorphism, use t
 
 Here's how I think about cache hierarchy from a compiler backend perspective:
 
-[[/images/stratum-svg.svg][Stratum memory hierarchy diagram]]
+@@md:![Stratum memory hierarchy diagram](/images/stratum-svg.svg)@@
 
 The name "Stratum" comes from this mental model: memory hierarchy as *geological layers*.
 

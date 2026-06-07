@@ -9,7 +9,7 @@
 #+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t))
 #+ZOLA_SECTION: technical/emacs
 
-[[/images/8-bytes-many-meanings.png][8 bytes many meanings]]
+@@md:![8 bytes many meanings](/images/8-bytes-many-meanings.png)@@
 
 #+BEGIN_QUOTE
 Source: [[https://x.com/chessMan786/status/1872641579615465924][Mohit Mishra]]

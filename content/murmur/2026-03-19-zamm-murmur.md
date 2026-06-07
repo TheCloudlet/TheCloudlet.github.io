@@ -11,7 +11,7 @@ draft = false
   math_auto_render = true
 +++
 
-[Plane spotting at the airport](/images/2026-03-19-plane.jpg)
+![Plane spotting at the airport](/images/2026-03-19-plane.jpg)
 
 > Just watching the metal birds take-off. Sorry for the grainy photo.
 
@@ -26,7 +26,7 @@ This made me think: what is the difference between reading blog posts and watchi
 
 First, reading blog posts using Elfeed with eww, transfers all fancy webpages into plain text, forcing myself fucusing on the context itself by ripping out all the distractions.
 
-[Elfeed in Emacs](/images/2026-03-19-Elfeed.png)
+![Elfeed in Emacs](/images/2026-03-19-Elfeed.png)
 
 Also, most posts I subscribe to are not aimed at profit; some authors are already successful in various areas. Blog posts have true authenticity, and the words don't feel forced—I don't feel like the author is trying to convince or sell concepts to me. On the contrary, reading things on LinkedIn is such a pain where people are screaming, "LOOK AT ME, I'M GOOD." Every sentence looks like they are using SCREAMING_CASE to emphasize their points.
 

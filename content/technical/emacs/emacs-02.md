@@ -13,7 +13,7 @@ draft = false
   math_auto_render = true
 +++
 
-[8 bytes many meanings](/images/8-bytes-many-meanings.png)
+![8 bytes many meanings](/images/8-bytes-many-meanings.png)
 
 > Source: [Mohit Mishra](https://x.com/chessMan786/status/1872641579615465924)
 

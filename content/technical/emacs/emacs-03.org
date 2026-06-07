@@ -147,7 +147,7 @@ The naming of boxed and unboxed is a programming language (PL) term that looks v
 - *Boxed*: The data lives on the heap (inside a "box"). You only hold a reference or pointer to it.
 - *Unboxed*: The raw bits of the data are laid out flat right where they are declared (on the stack, or inline within an array). There are no pointers to follow. ~std::variant~ is unboxed because all the bytes required for the largest possible variant are allocated inline right there.
 
-[[/images/boxed-vs-unboxed.png][Boxed vs unboxed memory layout]]
+@@md:![Boxed vs unboxed memory layout](/images/boxed-vs-unboxed.png)@@
 
 References on memory representation:
 

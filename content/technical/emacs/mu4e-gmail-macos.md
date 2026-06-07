@@ -16,7 +16,7 @@ Most guides I found either target Linux or go straight to OAuth2 — which invol
 
 Turns out App Password is enough, and the setup takes about 20 minutes.
 
-[mu4e dashboard in Doom Emacs](/images/mu4e-dashboard.png)
+![mu4e dashboard in Doom Emacs](/images/mu4e-dashboard.png)
 
 
 ## What is needed {#what-is-needed}
