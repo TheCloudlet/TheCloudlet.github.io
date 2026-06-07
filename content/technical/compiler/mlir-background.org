@@ -1,9 +1,0 @@
-#+TITLE: MLIR Background
-#+AUTHOR: Yi-Ping Pan (Cloudlet)
-#+DATE: 2026-06-01
-#+ZOLA_DRAFT: true
-#+ZOLA_SECTION: technical/compiler
-
-* TODOs
-- [ ] Install ox-zola
-- [ ] Try 1 page, transfer to org
