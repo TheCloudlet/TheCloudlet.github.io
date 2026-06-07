@@ -3,7 +3,7 @@ title = "From Pixels to Tensors, Part 1: 2D Rendering Baselines"
 author = ["Yi-Ping Pan (Cloudlet)"]
 description = "Font rasterization, geometry rasterization, and sprite compositing — the per-pixel parallelism that 3D GPUs later inherited."
 date = 2026-06-07
-draft = true
+draft = false
 [taxonomies]
   tags = ["2d-rendering", "nes-ppu", "font-rasterization", "linux-drm", "x11", "pixels-to-tensors"]
   categories = ["hardware-architecture"]
@@ -12,7 +12,7 @@ draft = true
   toc = true
 +++
 
-I started this series because I wanted to understand how ML compiler stacks built on MLIR — not just the API surface, but why they are shaped the way they are. The answer kept pointing backward: to GPU architecture, to the 3D pipeline, to the fixed-function hardware that preceded it.
+I started this series because I wanted to understand how ML compiler stacks built on MLIR actually work — not just the API surface, but why they are shaped the way they are. The trail goes back to GPU architecture, to the 3D pipeline, to the fixed-function hardware that preceded it.
 
 This is that backward journey. It starts at 2D rendering — font rasterization, geometry primitives, the NES PPU — because that is where per-pixel parallelism first became a hardware design constraint. Every abstraction in modern GPU programming, and eventually in MLIR's compilation model, is a response to problems that showed up here first.
 
@@ -64,8 +64,6 @@ The `set-face-attribute` call writes font properties into a `Lisp_String`'s inte
 
 
 #### How a Software-Rendered Terminal Talks to the Display Hardware {#how-a-software-rendered-terminal-talks-to-the-display-hardware}
-
-This section establishes the software baseline — the full cost of CPU-driven rendering — so Part 2 has a concrete reference point when the GPU takes over each step.
 
 "Drawing to the screen" is not one system call — it is a sequence of calls to the Linux DRM (Direct Rendering Manager) subsystem, with the actual pixel writing happening **without** any system call at all.
 
@@ -161,7 +159,7 @@ That is just for one memcpy per frame. In a real software compositor:
 
 A single channel of DDR4-3200 has a theoretical peak of 25.6 GB/s. In practice, achievable throughput is far lower, and the CPU is competing with every other process for that bandwidth. A 4 GB/s framebuffer copy alone consumes a significant fraction of available memory bandwidth, leaving little room for the actual application logic.
 
-No modern desktop compositor does this. Instead, it uses the GPU's 3D pipeline. (Will be mentioned later in 3D rendering.)
+No modern desktop compositor does this. Instead, it uses the GPU's 3D pipeline.
 
 ---
 
@@ -199,7 +197,7 @@ Framebuffer (all layers composited, topmost pixel wins)
 Display Controller → Monitor
 ```
 
-Each primitive call is independent. No DrawLine depends on the result of DrawRectangle. The same per-pixel isolation that applies within a glyph applies here across the entire widget tree.
+Each primitive call is independent — DrawLine does not see DrawRectangle's output, and DrawRectangle does not wait for DrawArc.
 
 ---
 
@@ -226,7 +224,7 @@ Both pipelines write to the same framebuffer. A terminal or window manager runs 
                  Display Controller → Monitor
 ```
 
-Every pixel in a given layer is independent — no pixel's color depends on its neighbor. A compositor can replace the entire CPU pipeline with a single draw call per window: two textured triangles, GPU-sampled and blended in parallel. That is the 3D pipeline we cover next.
+A compositor can replace the entire CPU pipeline with a single draw call per window: two textured triangles, GPU-sampled and blended in parallel.
 
 ---
 
@@ -235,7 +233,7 @@ Every pixel in a given layer is independent — no pixel's color depends on its 
 
 The 2D pipelines above describe a workstation or desktop OS. Games introduced a different pressure: real-time interactive rendering at a fixed hardware budget, with no OS compositor in the way.
 
-The NES (1985) is the clearest example of where that pressure leads. Nintendo's engineers had one goal — 60fps at the lowest possible cost — and the result was the PPU: a dedicated fixed-function compositor that handles everything the CPU cannot afford to do. Understanding its constraints is the direct predecessor to understanding why the 3D GPU was designed the way it was.
+The NES (1985) is the clearest example of where that pressure leads. Nintendo's engineers had one goal — 60fps at the lowest possible cost — and the result was the PPU: a dedicated fixed-function compositor that handles everything the CPU cannot afford to do.
 
 
 ### Super Mario Bros: How Side-Scrolling Works {#super-mario-bros-how-side-scrolling-works}
@@ -258,8 +256,6 @@ The NES offloads all pixel output to a dedicated chip — the PPU (Ricoh 2C02) �
 ![NES system architecture diagram](/images/nes-ppu-architecture.jpeg)
 
 The CPU writes game state into WRAM and pushes tile/sprite data into the PPU's internal tables. The PPU reads those tables and streams pixels directly to the TV — one pixel per clock, no framebuffer.
-
-Reference: [NES Graphics Explained, by NesHacker](https://youtu.be/7Co_8dC2zb8?si=sN6FOqVw1hXNOFJ7)
 
 The PPU has three hard constraints:
 
@@ -326,7 +322,7 @@ Sprites are separate from the background. Each sprite is an 8×8 or 8×16 pixel 
 
 The PPU has a hard limit: 8 sprites per scanline. If a 9th sprite appears on the same scanline, the PPU simply drops it. Game developers cycle sprite priority every frame to spread the dropout across different sprites, creating the characteristic NES flicker.
 
-The OAM evaluation unit processes at most 8 entries per scanline before pixel output begins — a fixed silicon limit, not a software bug.
+The OAM evaluation unit processes at most 8 entries per scanline before pixel output begins — a fixed silicon limit, not a software bug.[^fn:1]<sup>, </sup>[^fn:2]
 
 ---
 
@@ -356,4 +352,9 @@ NES games have no sprite rotation or scaling — the PPU has no multiplier, no m
 
 ## Conclusion {#conclusion}
 
-Font rasterization, geometry rasterization, and sprite compositing share one property: per-pixel independence. A TUI renderer, a side-scrolling game, or a window compositor all reduce to the same two operations — rasterize and composite — with no cross-pixel dependencies within a layer. The NES PPU executes this in fixed silicon at 60fps. The next section covers what happens when the same per-pixel parallelism is exposed as a programmable pipeline: the 3D GPU.
+Font rasterization, geometry rasterization, and sprite compositing share one property: per-pixel independence. A TUI renderer, a side-scrolling game, or a window compositor all reduce to the same two operations — rasterize and composite — with no cross-pixel dependencies within a layer. The NES PPU executes this in fixed silicon at 60fps. Part 2 takes that same property and asks what happens when it is exposed as a programmable pipeline.
+
+---
+
+[^fn:1]: [NES Graphics Explained, by NesHacker](https://youtu.be/7Co_8dC2zb8?si=sN6FOqVw1hXNOFJ7)
+[^fn:2]: [NES Sprites, OAM, and the Battle for Priority - Behind the Code](https://www.youtube.com/watch?v=8M2V5Pv6_1A)

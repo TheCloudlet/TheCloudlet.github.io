@@ -2,10 +2,12 @@
 #+DESCRIPTION: Font rasterization, geometry rasterization, and sprite compositing — the per-pixel parallelism that 3D GPUs later inherited.
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2026-06-07
-#+ZOLA_DRAFT: true
+#+ZOLA_DRAFT: false
+
 #+ZOLA_SECTION: technical/pixels-to-tensors
 #+ZOLA_CATEGORIES: hardware-architecture
 #+ZOLA_TAGS: 2d-rendering nes-ppu font-rasterization linux-drm x11 pixels-to-tensors
+
 #+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (toc . t))
 
 I started this series because I wanted to understand how ML compiler stacks built on MLIR actually work — not just the API surface, but why they are shaped the way they are. The trail goes back to GPU architecture, to the 3D pipeline, to the fixed-function hardware that preceded it.
@@ -243,8 +245,6 @@ The NES offloads all pixel output to a dedicated chip — the PPU (Ricoh 2C02) �
 
 The CPU writes game state into WRAM and pushes tile/sprite data into the PPU's internal tables. The PPU reads those tables and streams pixels directly to the TV — one pixel per clock, no framebuffer.
 
-Reference: [[https://youtu.be/7Co_8dC2zb8?si=sN6FOqVw1hXNOFJ7][NES Graphics Explained, by NesHacker]]
-
 The PPU has three hard constraints:
 
 - 4 distinct memory regions that control the PPU: Pattern Tables (which hold the raw 8×8 pixel tile data), Name Tables (the background layout grid), Palettes (color definitions), and OAM (Object Attribute Memory for dynamic foreground sprites).
@@ -307,7 +307,7 @@ Sprites are separate from the background. Each sprite is an 8×8 or 8×16 pixel 
 
 The PPU has a hard limit: 8 sprites per scanline. If a 9th sprite appears on the same scanline, the PPU simply drops it. Game developers cycle sprite priority every frame to spread the dropout across different sprites, creating the characteristic NES flicker.
 
-The OAM evaluation unit processes at most 8 entries per scanline before pixel output begins — a fixed silicon limit, not a software bug.
+The OAM evaluation unit processes at most 8 entries per scanline before pixel output begins — a fixed silicon limit, not a software bug.[fn:1][fn:2]
 
 -----
 
@@ -336,3 +336,10 @@ NES games have no sprite rotation or scaling — the PPU has no multiplier, no m
 * Conclusion
 
 Font rasterization, geometry rasterization, and sprite compositing share one property: per-pixel independence. A TUI renderer, a side-scrolling game, or a window compositor all reduce to the same two operations — rasterize and composite — with no cross-pixel dependencies within a layer. The NES PPU executes this in fixed silicon at 60fps. Part 2 takes that same property and asks what happens when it is exposed as a programmable pipeline.
+
+-----
+
+* Footnotes
+
+[fn:1] [[https://youtu.be/7Co_8dC2zb8?si=sN6FOqVw1hXNOFJ7][NES Graphics Explained, by NesHacker]]
+[fn:2] [[https://www.youtube.com/watch?v=8M2V5Pv6_1A][NES Sprites, OAM, and the Battle for Priority - Behind the Code]]

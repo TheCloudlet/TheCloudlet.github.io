@@ -1,0 +1,11 @@
+#+TITLE: 3D rendering
+#+DESCRIPTION: Description
+#+AUTHOR: Yi-Ping Pan (Cloudlet)
+#+DATE: 2026-06-10
+#+ZOLA_DRAFT: true
+
+#+ZOLA_SECTION: technical/pixels-to-tensors
+#+ZOLA_CATEGORIES: category
+#+ZOLA_TAGS: tags
+
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . nil) (toc . t))
