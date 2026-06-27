@@ -1,23 +1,49 @@
 #!/bin/sh
 # build-org.sh: Lint org files, export to md, then validate md output.
-#
-# Usage:
-#   ./scripts/build-org.sh           # full pipeline (skip drafts)
-#   ./scripts/build-org.sh --drafts  # full pipeline (include drafts)
-#   ./scripts/build-org.sh --lint    # lint only
-#   ./scripts/build-org.sh --export  # export only (skip drafts)
-#   ./scripts/build-org.sh --check   # check md only
+
+usage() {
+    cat <<'EOF'
+build-org.sh — lint .org files, export them to .md, and validate the output.
+
+Usage:
+  ./scripts/build-org.sh [MODE] [--drafts]
+
+Modes (default: full pipeline):
+  (none)      Run the full pipeline: lint -> export -> check
+  --lint      Lint .org files only
+  --export    Export .org -> .md only
+  --check     Validate generated .md files only
+  -h, --help  Show this help and exit
+
+Options:
+  --drafts    Include files marked '#+ZOLA_DRAFT: true' (default: skipped)
+  --force     Re-export every .org even if its .md is already up to date.
+              By default a .md newer than its .org is kept (logged "keep old").
+
+Environment:
+  EMACS       Emacs binary to use for export (default: emacs)
+EOF
+}
 
 CONTENT_DIR="content"
 EMACS="${EMACS:-emacs}"
 fail=0
 lint_fail=0
 INCLUDE_DRAFTS=""
+FORCE=""
 
 # parse flags
 for arg in "$@"; do
     case "$arg" in
-        --drafts) INCLUDE_DRAFTS=1 ;;
+        -h|--help) usage; exit 0 ;;
+        --drafts)  INCLUDE_DRAFTS=1 ;;
+        --force)   FORCE=1 ;;
+        --lint|--export|--check) ;;   # valid modes, handled in dispatch below
+        -*)
+            printf "\033[1;31mbuild-org.sh: invalid option '%s'\033[0m\n\n" "$arg" >&2
+            usage >&2
+            exit 2
+            ;;
     esac
 done
 
@@ -119,7 +145,8 @@ fi
 export_org() {
     log "Step 2: Exporting .org → .md"
 
-    ORG_EXPORT_DRAFTS="$INCLUDE_DRAFTS" "$EMACS" --batch --load scripts/org-export.el \
+    ORG_EXPORT_DRAFTS="$INCLUDE_DRAFTS" ORG_EXPORT_FORCE="$FORCE" \
+        "$EMACS" --batch --load scripts/org-export.el \
         2>&1 | grep -v "^Loading\|^Wrote\|^org-babel\|\[ox-hugo\]\|\[ox-zola\]"
 }
 
@@ -155,9 +182,14 @@ check_md() {
             continue
         fi
 
-        # md must be newer than org
+        # md should be newer than org. If it is older, either we deliberately
+        # kept the old .md (incremental, no --force) or the export failed.
         if [ "$org" -nt "$md" ]; then
-            err "$md — stale (.org is newer, export may have failed)"
+            if [ -n "$FORCE" ]; then
+                err "$md — stale (.org is newer after --force, export may have failed)"
+            else
+                warn "$md — .org is newer; kept old .md (run with --force to re-export)"
+            fi
         else
             ok "$md"
         fi
@@ -181,11 +213,20 @@ check_md() {
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
-case "${1:-all}" in
+# Pick the mode from the arguments (options like --drafts are ignored here;
+# unknown options were already rejected during flag parsing above).
+MODE="all"
+for arg in "$@"; do
+    case "$arg" in
+        --lint|--export|--check) MODE="$arg" ;;
+    esac
+done
+
+case "$MODE" in
     --lint)   lint_org ;;
     --export) export_org ;;
     --check)  check_md ;;
-    all|*)
+    all)
         lint_org
         if [ "$lint_fail" -gt 0 ]; then
             printf "\033[1;31m\n%d lint error(s) — fix before exporting.\033[0m\n" "$lint_fail"

@@ -57,17 +57,32 @@ Ensures that maps (tables) are at the end of the alist."
       org-export-with-broken-links t
       ox-zola-base-dir (expand-file-name default-directory))
 
-(let ((include-drafts (getenv "ORG_EXPORT_DRAFTS")))
+;; Treat an unset OR empty environment variable as false. `getenv' returns ""
+;; for a variable exported as empty, and "" is truthy in Elisp, so compare
+;; explicitly against a non-empty value.
+(let ((include-drafts (let ((v (getenv "ORG_EXPORT_DRAFTS"))) (and v (not (string= v "")))))
+      (force          (let ((v (getenv "ORG_EXPORT_FORCE")))  (and v (not (string= v ""))))))
   (dolist (org (directory-files-recursively "content" "\\.org$"))
-    (with-current-buffer (find-file-noselect (expand-file-name org))
-      (let ((is-draft (save-excursion
-                        (goto-char (point-min))
-                        (re-search-forward "^#\\+ZOLA_DRAFT: true" nil t))))
-        (if (and is-draft (not include-drafts))
-            (message "  \033[1;33m[SKIP]\033[0m %s (draft)" org)
+    (let ((org-abs (expand-file-name org)))
+     (with-current-buffer (find-file-noselect org-abs)
+      (let* ((md (concat (file-name-sans-extension org-abs) ".md"))
+             ;; .md is "fresh" when it exists and is not older than its .org
+             ;; (i.e. the .org was not modified after the last export).
+             (md-fresh (and (file-exists-p md)
+                            (not (file-newer-than-file-p org-abs md))))
+             (is-draft (save-excursion
+                         (goto-char (point-min))
+                         (re-search-forward "^#\\+ZOLA_DRAFT: true" nil t))))
+        (cond
+         ((and is-draft (not include-drafts))
+          (message "  \033[1;33m[SKIP]\033[0m %s (draft)" org))
+         ;; Incremental: keep an up-to-date .md unless --force was given.
+         ((and md-fresh (not force))
+          (message "  \033[1;36m[SKIP]\033[0m %s <- keep old (.md newer than .org)" org))
+         (t
           (condition-case e
               (progn
                 (ox-zola-export-to-md)
                 (message "  \033[1;32m[OK]\033[0m  %s%s" org (if is-draft " (draft)" "")))
             (error
-             (message "  \033[1;31m[ERR]\033[0m %s\n       %s" org e))))))))
+             (message "  \033[1;31m[ERR]\033[0m %s\n       %s" org e))))))))))
