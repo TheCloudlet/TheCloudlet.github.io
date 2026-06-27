@@ -356,5 +356,10 @@ Font rasterization, geometry rasterization, and sprite compositing share one pro
 
 ---
 
+From Pixels to Tensors Series:
+
+-   Part 1: 2D Rendering Baselines
+-   Part 2: [The 3D Graphics Pipeline](@/technical/pixels-to-tensors/part-2-3d-pipeline.md)
+
 [^fn:1]: [NES Graphics Explained, by NesHacker](https://youtu.be/7Co_8dC2zb8?si=sN6FOqVw1hXNOFJ7)
 [^fn:2]: [NES Sprites, OAM, and the Battle for Priority - Behind the Code](https://www.youtube.com/watch?v=8M2V5Pv6_1A)
