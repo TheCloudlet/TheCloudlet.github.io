@@ -8,8 +8,6 @@ show_reading_time = false
 show_author = false
 +++
 
-I'm a compiler engineer working on VHDL compilers.
+I'm a compiler engineer working on NPU compiler infrastructure — MLIR-based pipelines that take neural network graphs from ONNX down to silicon.
 
-I write about C++, compilers, and programming languages — mostly to figure things out for myself. If it helps you too, that's a bonus.
-
-Currently learning SICP and building [Coogle](https://github.com/TheCloudlet?tab=repositories), a Hoogle-style search for C++.
+I write about compilers, systems, and hardware at the boundary where software meets physics. Mostly to understand things deeply. If it helps you too, that's a bonus.
