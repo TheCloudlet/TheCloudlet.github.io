@@ -374,3 +374,22 @@ article > span {
     text-decoration: none;
   }
 }
+
+// =============================================================================
+// Math (KaTeX) — keep wide display equations from overflowing the viewport
+//
+// Display math ($$...$$) renders inside .katex-display. Wide matrices and long
+// expressions are common here and otherwise force a full-page horizontal scroll
+// on mobile (Google "Content wider than screen"). Make the equation itself the
+// scroll container instead, so the page layout stays within the viewport.
+// =============================================================================
+
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  // a little padding so descenders aren't clipped by the scroll area
+  padding: 0.25rem 0 0.5rem;
+  // tighten the scrollbar's visual weight on the equation block
+  scrollbar-width: thin;
+}
+
