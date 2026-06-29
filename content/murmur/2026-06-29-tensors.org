@@ -1,0 +1,67 @@
+#+TITLE: Machine Learning is Just Data Flowing Through Operators
+#+DESCRIPTION: A small realization, during ML onboarding, that deep learning is one big blob of data transformed into another big blob that hides the answer — and why tensors feel a little like Lisp.
+#+AUTHOR: Yi-Ping Pan (Cloudlet)
+#+DATE: 2026-06-29
+#+ZOLA_CATEGORIES: murmur
+#+ZOLA_TAGS: murmur til machine-learning tensor lisp mlir
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t))
+#+ZOLA_SECTION: murmur
+
+@@md:![ONNX Graph](/images/onnx-graph.png)@@
+
+Something clicked today during my ML onboarding — a lightbulb moment.
+
+Here is the angle it came from. I was staring at an ONNX operator graph, learning how to use our test framework to check whether our MLIR compiler had correctly optimized that graph, when it suddenly hit me: the essence of machine learning — of deep learning — is that you throw in a huge blob of data, push it through an enormous number of operations, and out comes another huge blob of data, with the result we want hidden somewhere inside it.
+
+That sounds obvious, maybe even absurd to say out loud. But the point is that we do *not* encode human reasoning up front. We send the data itself through a particular model, and with a suitable loss function and a few other details, we let gradient descent find the classification, the probability, the ranking, object detection — whatever we are after.
+
+The old era of AI was the opposite. Its essence was *symbolic*: turning the human thought process into symbols. For image recognition, we would hand-define things like color, shape, texture, pattern, edges, shadows, and write them into metadata to tell the computer what counts as a cat. It is no accident that the language of that era was largely Lisp — symbolic AI is symbol manipulation, and Lisp was built to manipulate symbolic expressions.
+
+But in today's deep learning, the data that flows *is* the program — it is the data, and sometimes it is the control flow too. The input is one big blob of data, called a *tensor*. The output is another pile of data, another tensor. The only difference between the operators along the way is the dimension, shape, and size of the tensors they pass around.
+
+In some ways, a tensor reminds me of a Lisp object. In Lisp almost everything is an object carrying a type tag — whether it is a number or a list, it can be inspected and manipulated through one uniform interface. In deep learning, almost every unit of data that flows is likewise a tensor carrying metadata: shape, dtype, device. We rarely touch the raw memory buffer directly; we operate on these "self-describing objects" instead.
+
+Going one step further: in Lisp, data and code can take the very same form — the S-expression. In modern deep learning, the path the data (the tensor) flows through *is* the definition of the whole computation (the computation graph). The two have completely different goals, yet the idea — wrap data into objects rich with information, then let computation happen on those objects — has a strange kind of resemblance.
+
+Here is where Lisp and tensors feel alike:
+
+*1. The basic unit, and how shape is represented.* In Lisp everything bottoms out in atoms and cons cells, and structure is just nesting. A tensor bottoms out in scalars, and the same nesting is summarized by its shape. Take one concrete 3D block — two stacked 2×3 matrices, i.e. =shape = (2, 2, 3)= — and write the very same numbers both ways:
+
+#+BEGIN_SRC text
+Lisp (nested lists):
+  (((1 2 3)
+    (4 5 6))
+   ((7 8 9)
+    (10 11 12)))
+  ; nesting depth = rank; each level = one axis
+
+Tensor (shape = (2, 2, 3)):
+  [[[1, 2, 3],
+    [4, 5, 6]],
+   [[7, 8, 9],
+    [10, 11, 12]]]
+  ; (2, 2, 3) = 2 blocks, each a 2x3 matrix
+#+END_SRC
+
+The Lisp list carries the structure implicitly in how deep the parentheses go; the tensor pulls that same structure out into an explicit shape tuple. Same data, two ways of recording "where the nesting is."
+
+*2. A uniform interface.* You do not need a different accessor per concrete type — one set of operations works across all of them, because the object carries its own description.
+
+#+BEGIN_SRC text
+Lisp:    (type-of x)  (length x)  (car x)
+Tensor:  x.dtype      x.shape     x[0]
+#+END_SRC
+
+*3. Data is program.* In Lisp an S-expression is both a list you can walk and code you can evaluate. In deep learning the tensors and the operators between them *are* the graph — the data and its flow are the same artifact the compiler consumes and optimizes.
+
+#+BEGIN_SRC text
+Lisp:    (+ 1 (* 2 3))
+Tensor:  matmul(a, b) + c
+; both are values AND the graph to evaluate / lower
+#+END_SRC
+
+*4. Dynamism.* A Lisp value's type is known at runtime, not nailed down ahead of time; a tensor's shape can likewise be dynamic, resolved only when the data actually arrives. Both defer to "what is actually here right now" rather than a rigid static declaration.
+
+So here is the thought I keep circling back to. Symbolic AI and deep learning look like opposites, but both are attempts to make a machine do work beyond what a human can do by hand — and both reach for the same Lispy move to get there: treat structure as the program. Old AI wrote the symbols by hand; deep learning lets the data's own structure (the computation graph) be the program.
+
+And it does not stop at the model. The compiler stack underneath is built the same way. MLIR is deeply Lispy — its IR is a nested, structured tree of operations and regions, and you generate real C++ from declarative structure: TableGen records describe the ops, and template machinery turns that description into code. It is the same idea Racket leans on — *use structure to create code* — just wearing C++ and TableGen instead of parentheses. Once you notice the pattern, you see it everywhere: data is program, and program is data.
