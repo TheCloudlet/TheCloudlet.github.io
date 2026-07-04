@@ -18,6 +18,8 @@ This is that backward journey. It starts at 2D rendering — font rasterization,
 
 The series runs: 2D rendering → 3D GPU pipeline → GPGPU → deep learning → MLIR.
 
+> This series of articles represents my own attempt to understand the technical evolution from pixels to tensors. Each domain along this path—graphics, hardware architecture, compilers, and machine learning—is an extraordinarily deep field. I cannot claim to have fully mastered any of them. I am simply tracing this intellectual thread through first-principles reasoning and historical inquiry, documenting the process as I go. I hope these notes, however incomplete, may offer some value to fellow explorers navigating the same topics.
+
 
 ## 2D Rendering {#2d-rendering}
 
