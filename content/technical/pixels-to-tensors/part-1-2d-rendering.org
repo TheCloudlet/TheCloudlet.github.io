@@ -347,8 +347,13 @@ From Pixels to Tensors Series:
 
 - Part 1: 2D Rendering Baselines
 - Part 2: [[file:part-2-3d-pipeline.org][The 3D Graphics Pipeline]]
+- Part 3: [[file:part-3-symoblic-ai.org][Symbolic AI]]
 
-* Footnotes
+-----
+
+#+HTML: <br>
+
+*Footnotes*
 
 [fn:1] [[https://youtu.be/7Co_8dC2zb8?si=sN6FOqVw1hXNOFJ7][NES Graphics Explained, by NesHacker]]
 [fn:2] [[https://www.youtube.com/watch?v=8M2V5Pv6_1A][NES Sprites, OAM, and the Battle for Priority - Behind the Code]]

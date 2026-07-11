@@ -1,0 +1,204 @@
++++
+title = "From Pixels to Tensors, Part 3: Symbolic AI"
+author = ["Yi-Ping Pan (Cloudlet)"]
+description = "Symbolic AI failed for reasons that have nothing to do with hardware — the knowledge acquisition bottleneck and the unknown unknowns. The parallel machine's role was narrower: to decide which successor could run at scale. Covers the physical symbol system hypothesis, forward chaining, and where symbolic rewriting still lives."
+date = 2026-07-05
+draft = true
+[taxonomies]
+  tags = ["symbolic-ai", "gofai", "expert-systems", "forward-chaining", "lisp", "mlir", "pixels-to-tensors"]
+  categories = ["machine-learning"]
+[extra]
+  math = true
+  toc = true
++++
+
+## Intro {#intro}
+
+[Part 1](@/technical/pixels-to-tensors/part-1-2d-rendering.md) covered 2D rendering and [Part 2](@/technical/pixels-to-tensors/part-2-3d-pipeline.md) built the 3D pipeline into a massively parallel machine. That machine runs one kind of AI well and is almost useless for another. Two separate things are worth keeping apart here. Symbolic AI failed for reasons that have nothing to do with hardware, which this part spends most of its length on. The parallel machine's role was narrower: not to defeat the old paradigm, but to decide which successor could run at scale. Before the series moves on to GPGPU and deep learning, this part covers both.
+
+Broadly speaking, the history of AI has been shaped by two competing paradigms.[^fn:1] The first, **Symbolic AI** (also known as GOFAI, or "Good Old-Fashioned AI"[^fn:2]), treats intelligence as the manipulation of discrete symbols according to explicit rules. Knowledge is written down as facts and rules; an inference engine then derives new facts until it reaches a conclusion. The second paradigm, which we now call **Connectionist AI** or neural networks, treats intelligence as parameters that are **fitted from data** rather than rules written by hand. This second paradigm is what the rest of the series will eventually focus on.
+
+Symbolic AI is here for a reason beyond history. It is the fixed-function era of artificial intelligence — an analogy to the early graphics of Part 1, not to the parallel machine that came later. That early pipeline had its behavior hardwired into silicon, changeable only by redesigning the chip. Symbolic AI had its behavior hardwired into rules, extendable only by writing more rules. Both hit the same wall: when the wanted behavior fell outside what had been specified in advance, neither could adapt.
+
+When the fixed-function graphics pipeline got too limiting, it moved to programmable shaders. AI hit the same pressure but escaped a different way: instead of writing more rules, the field learned to fit parameters from data. The rest of this part examines why the rule-based approach ran out of road.
+
+> This series of articles represents my own attempt to understand the technical evolution from pixels to tensors. Each domain along this path — graphics, hardware architecture, compilers, and machine learning — is an extraordinarily deep field. I cannot claim to have fully mastered any of them. I am tracing this intellectual thread through first-principles reasoning and historical inquiry, documenting the process as I go. I hope these notes, however incomplete, may offer some value to fellow explorers navigating the same topics.
+
+
+## What is Symbolic AI {#what-is-symbolic-ai}
+
+Symbolic AI rests on one strong claim: general intelligent action can be achieved through the manipulation of symbols according to formal rules.
+
+This claim received its clearest and most rigorous formulation in Allen Newell and Herbert Simon’s 1976 Turing Award lecture, "Computer Science as Empirical Inquiry: Symbols and Search." They proposed what they called the Physical Symbol System Hypothesis (PSSH):
+
+> A physical symbol system has the necessary and sufficient means for general intelligent action.
+
+By “necessary,” they meant that anything showing general intelligence will, on analysis, turn out to be a physical symbol system. By “sufficient,” they meant that a physical symbol system of the right size and organization can be arranged to show general intelligence. This was not offered as philosophy. It was an empirical claim, testable by building systems and watching what they do.
+
+A physical symbol system, in their terms, consists of symbols (physical patterns that can designate objects or processes), expressions built from those symbols, and processes that create, modify, and interpret those expressions. Two mechanisms carry the weight. **Designation** lets a pattern inside the machine stand for something outside it: the symbol `socrates` for the man, `mortal` for the property. Without it the symbols are bits with no grip on the world. **Interpretation** runs an expression that designates a process, so a symbol structure is not only a description but a program the machine can execute. Newell and Simon's claim is that the two, properly scaled, are sufficient for general intelligence.
+
+The strong half of **necessary and sufficient** is necessity: not that a symbol system **can** be intelligent, but that anything intelligent **must**, on analysis, turn out to be one. That made PSSH falsifiable, and a target. The sharpest early attack was Hubert Dreyfus's **What Computers Can't Do** (1972). Drawing on Heidegger and Merleau-Ponty, Dreyfus argued that much of competent human action rests on embodied, situated know-how that is never fully spelled out as facts and rules. If the skills and context that let people act in the world resist symbolic encoding, then more rules will not close the gap. The symbolic paradigm was starting from the wrong primitives for perceptual and embodied domains. The objection was dismissed at the time. It named, two decades early, the exact wall the field would hit. Newell, for his part, spent his later career on SOAR, a cognitive architecture built to show a physical symbol system could model the full range of human problem-solving.
+
+Newell and Simon had spent the 1950s and 60s building actual reasoning programs, and by the mid-1970s they had concluded that symbol manipulation was not one path to general intelligence but the only one that could scale.
+
+This belief powered one of the most ambitious periods in AI history: the rise of expert systems in the 1970s and early 1980s. Researchers built systems that encoded the knowledge of human specialists as large collections of if-then rules. MYCIN, developed at Stanford, could diagnose bacterial infections and recommend antibiotics using roughly 600 rules; in some evaluations it performed at or above the level of human physicians (though it was never deployed clinically).[^fn:3] XCON (also known as R1), deployed at Digital Equipment Corporation, configured orders for VAX computers and reportedly saved the company millions of dollars annually. DENDRAL, an earlier system, inferred molecular structures from mass spectrometry data. For a while, it seemed that the symbolic approach was not only theoretically sound but practically powerful.
+
+Yet even at the height of this excitement, there were already signs of strain. The systems worked well inside narrow, well-bounded domains where the relevant facts and rules could be exhaustively enumerated in advance. Outside those domains, things became difficult.
+
+
+## The Anatomy of a Rule System {#the-anatomy-of-a-rule-system}
+
+A classic rule-based system has three parts. The **rule base** holds the rules, each in the form `IF condition THEN action`. This is the authored knowledge — the part a human writes down. The **working memory** holds the facts currently believed true; it starts with whatever the system is told and grows as reasoning proceeds. The **inference engine** is the process that connects the two: it scans the rules against working memory, finds rules whose conditions are satisfied, and executes their actions, which usually means asserting new facts.
+
+**Forward chaining** is data-driven. It starts from the facts in working memory and applies every rule whose condition matches, adding the resulting facts back into working memory, then repeats. New facts trigger more rules, which assert still more facts, until a pass over the rule base produces nothing new. That terminating state is a **fixpoint**: the system has derived everything its rules allow from what it was given.
+
+Take a small working memory and rule base:
+
+```text
+Working memory:  human(socrates)
+
+Rules:
+  R1:  human(X)      =>  mortal(X)
+  R2:  mortal(X)     =>  will_die(X)
+```
+
+The engine scans. `R1` matches on `human(socrates)`, binding the variable `X` to `socrates` and asserting `mortal(socrates)`. (That binding of a variable to make a pattern fit a fact is **unification**.) That new fact makes `R2` fire, asserting `will_die(socrates)`. A third scan finds nothing new, and the engine halts. The conclusion `will_die(socrates)` was never written down; it was derived by grinding facts through rules to a fixpoint.
+
+**Backward chaining** runs the same rules in the opposite direction. It starts from a goal — say, the query `mortal(socrates)?` — finds a rule that could conclude it (`R1`), and checks whether that rule's condition holds. Here the condition is `human(socrates)`, which is already a fact, so the goal succeeds. Had the condition been unknown, it would have become a new sub-goal, and the engine would recurse until it bottomed out at known facts. Forward chaining asks "what can I derive?"; backward chaining asks "what would I need for this to be true?"
+
+Both are formal, mechanical, and correct. Given a closed set of facts and rules with clear boundaries, deduction is reliable and terminating. Lisp made this natural: rules and facts are both lists, so a program can build, inspect, and rewrite its own rules as ordinary data.
+
+Now change the domain. Suppose the goal is to answer `cat(image)?` for an array of pixels. We start writing rules:
+
+```text
+pointy_ears(I) AND whiskers(I) AND tail(I)  =>  cat(I)
+```
+
+The rule base stops closing. A cat seen from behind has no visible whiskers. A cat in deep shadow has no clean edges to detect ears from. A cat whose tail is hidden by furniture fails the `tail` condition. A drawing of a cat satisfies every condition and is not a cat. A cat that lost an ear fails `pointy_ears`. Each exception demands another rule, and each rule opens exceptions of its own. And the conditions themselves are the problem: `pointy_ears(I)` and `whiskers(I)` are perceptual predicates with no rule to establish them either. The facts never get into working memory in the first place.
+
+Loosening a condition does not solve the problem; it relocates the error. Say a cat with rounded ears fails `pointy_ears`, so the condition is relaxed to accept round ears too. Now a rat satisfies `cat(I)`: small, round-eared, whiskered, tailed. Tighten a condition to exclude a non-cat and it also excludes some real cat. Loosen it to admit the real cat and it admits some non-cat. No setting is both complete and correct, because the category was never a finite list of visible features to begin with.
+
+This is the **knowledge acquisition bottleneck**. The symbolic paradigm requires making explicit everything the system needs to know. In a closed domain that requirement is a finite chore. In an open perceptual domain it never terminates, because the world keeps producing cases the rule author never enumerated.
+
+
+## Symbolic AI in Production {#symbolic-ai-in-production}
+
+The bottleneck did not stop symbolic systems from doing real, hard work — as long as the domain stayed closed.
+
+
+### Lisp in Space {#lisp-in-space}
+
+In May 1999, NASA handed control of the Deep Space 1 spacecraft to the Remote Agent, an autonomy system running on a custom port of Harlequin Common Lisp — a commercial Common Lisp implementation ported for space flight.[^fn:4] It had three parts: a planner that decided what to do, an executive that carried the plan out, and a model-based diagnostic system called Livingstone that watched for component faults and responded to them. For roughly two days it managed the spacecraft's own operations — allocating power, orienting the craft, firing thrusters, planning activities, and diagnosing simulated faults — the first AI to command a spacecraft. The domain was closed: a known spacecraft, a known set of components and failure modes. That is what let the rules cover it. The system won a share of NASA's 1999 Software of the Year award.
+
+A full Lisp REPL ran live on the spacecraft. The same read-eval-print loop that runs on a laptop, now in interplanetary space. On such a system there is no line between operating it and reprogramming it: the running behavior is symbol structures the system can inspect and rewrite in place.
+
+That mattered. A race condition slipped past ground testing and wedged the experiment. The team fixed it from Earth, on the live REPL. Ron Garret, who was there, put the distance plainly: the spacecraft was "150 million miles away" with "an hour round trip light time." Every keystroke went out through the Deep Space Network and waited out the delay. They un-wedged it and let the scenario finish.
+
+
+### Expert Systems {#expert-systems}
+
+Expert systems were the commercial form of the same idea. XCON (originally R1), deployed at Digital Equipment Corporation from 1980, configured customer orders for VAX computers: given a list of components, its rules checked compatibility, filled in missing parts, and produced a valid wiring layout. It grew from a few hundred rules to several thousand and reportedly saved DEC tens of millions of dollars a year. Its domain was closed by the product catalog — every component, every constraint, enumerable in advance. And its cost was exactly the maintenance burden the closed domain implied: the catalog changed constantly, and the rule base had to be patched to track it, forever.
+
+
+## The Boom and the Winter {#the-boom-and-the-winter}
+
+The structural limit arrived as a business collapse. Through the early 1980s expert systems were sold as the next platform. Edward Feigenbaum, who had built DENDRAL and MYCIN and is usually called the father of expert systems, made the pitch concrete: a few hundred well-chosen rules would match a high-functioning professional, and rules were cheaper than experts. The work even had a name, **knowledge engineering**, and a job title. The knowledge engineer sat with a domain expert and transcribed the expertise into rules. Companies staffed whole teams to do it. A hardware industry grew up alongside, since the systems ran best on dedicated Lisp machines from Symbolics and LMI.
+
+Both halves of the pitch failed, in the way the knowledge acquisition bottleneck predicted. Transcription did not converge. An expert's competence is not a few hundred clean rules; it is a large, partly tacit mass. Past a few hundred rules the base became a maintenance problem in its own right. New rules contradicted old ones. A patch for one case silently broke another, because in a forward-chaining system any rule can fire on any other's output. There is no local edit; every addition is global. The base got harder to keep consistent exactly as it grew large enough to be useful. Feigenbaum's few hundred rules were not a floor to build up from. They were a ceiling.
+
+The economics broke at the same time. Around 1987 workstations and PCs became fast enough to run the same software without dedicated Lisp hardware, and the Lisp-machine market collapsed almost overnight, taking the expert-systems companies that depended on it down with it. Investment and government funding pulled back, and the field entered its second **AI winter**. The lesson the winter taught was not that the rules were badly written. It was that hand-authored rules are the wrong tool for any domain that does not stay closed, and almost no valuable domain stays closed.
+
+
+## Where Symbolic AI Breaks {#where-symbolic-ai-breaks}
+
+The unbounded growth of the rule base is only the symptom. The deeper problems are structural: every piece of knowledge must be authored by a human, and the system has no way to notice what its author never anticipated.
+
+Every rule is authored. Someone has to state, in explicit form, what the system knows, which for a narrow domain means finding a real expert and sitting them down to write rules. This is the hardest problem in the paradigm, because the expert's competence is largely tacit. A doctor recognizes an infection, a technician hears the fault in an engine, but neither carries a clean set of if-then rules in their head. The skill runs ahead of any account they can give of it. Transcribing it into rules is a second job, harder than having the skill, and the two abilities rarely live in the same person.
+
+This is the step the connectionist route removes. Instead of asking a human to make the knowledge explicit, it fits the rules from data. The examples carry the knowledge, and the parameters are learned rather than written. The tacit skill that could never be transcribed does not need to be: the labeled data already contains it. Hand-authoring the world's distinctions and learning them from examples are not two settings of one difficulty dial. The gap between them is enormous, and it is the gap that decides which paradigm can scale.
+
+Even where a domain expert can be found, the authored system stays blind to whatever the author did not foresee. The space of knowledge splits four ways:
+
+```text
+Knowledge Awareness Matrix
+
+  +------------------------------+--------------------------------+
+  |      Known Knowns            |      Known Unknowns            |
+  |                              |                                |
+  |  - Explicit rules            |  - Missing information         |
+  |  - Clear facts               |  - Can ask or fail gracefully  |
+  +------------------------------+--------------------------------+
+  |     Unknown Knowns           |     Unknown Unknowns           |
+  |                              |                                |
+  |  - Tacit skills              |  - No mechanism to detect      |
+  |  - Hard to extract           |  - The dangerous quadrant      |
+  +------------------------------+--------------------------------+
+```
+
+Symbolic systems handle the top row of this matrix well. They apply explicit rules, and a well-designed one can even detect when a required fact is missing and ask for it. The difficulties are all in the bottom row.
+
+The quadrant of **Unknown Knowns** corresponds to the kind of tacit competence that experienced practitioners possess but struggle to articulate. A senior software engineer may have a reliable “radar” for code smells that signal deep architectural problems or subtle performance issues. Yet when asked to write down the precise rules they are using, they usually cannot. The knowledge is real, but it resists clean symbolic encoding. Any attempt to force it into explicit if-then rules tends to lose critical nuance or to overfit to past cases.
+
+Even more problematic is the quadrant of **Unknown Unknowns**. Here the system does not merely lack information — it lacks any awareness that something important is missing. In this state, the system can confidently operate on an incomplete or distorted model of the world and have no internal signal that its conclusions may be wrong. Because there is no mechanism to notice the gap, the only way such errors are discovered is through external failure or human inspection after the fact. This is the quadrant in which purely symbolic systems are most brittle, because the failure mode is not “I don’t know” but “I don’t know that I don’t know.”
+
+This blind spot shows up as several failure modes:
+
+-   **No graceful degradation.** A neural network handed an unfamiliar input still returns a plausible answer. A production system has no such fallback: it fails hard, or fails silently with high confidence. In medicine, avionics, or driving, the silent failure is the dangerous one.
+-   **Rigid ontology.** Once `pointy_ears`, `whiskers`, and `tail` are the predicates, the system can only think inside that carving of the world. A mechanical cat, a person in cat-ear headphones, a cat's silhouette: any category the author never encoded is invisible, not merely unhandled.
+-   **Non-local interference.** In forward chaining, any new rule can fire on any other's output, so a patch for one unknown case can silently break cases that already worked. Every fix is a global risk.
+-   **No uncertainty.** Classic production systems work in true/false/unknown. They cannot say "70% likely a cat" — yet unknown unknowns are exactly the high-uncertainty cases where a hedged judgment would matter.
+-   **Unverifiable.** Testing covers only cases the author thought of. The unknown unknowns are by definition the ones no test enumerates, which is why authored rules are most dangerous in the safety-critical domains that most need guarantees.
+
+
+## Where Symbolic AI Still Lives {#where-symbolic-ai-still-lives}
+
+Symbolic AI did not disappear when the expert-systems boom faded; it moved into every domain whose facts are governed by a stable, decidable formal structure rather than by the open world.
+
+The mechanism is unchanged: match a pattern, apply a rewrite, repeat to a fixpoint. A computer algebra system simplifying an expression in \\(x\\), \\(y\\), and \\(z\\) runs exactly this loop. The facts are algebraic terms, the rules are identities like \\(x + 0 \to x\\) and \\(x \cdot y + x \cdot z \to x \cdot (y + z)\\), and the engine rewrites until the term stops changing. Every case is covered because algebra **is** closed: the grammar of well-formed expressions fixes the whole space of possible facts in advance. A type checker, a proof assistant, a SQL query optimizer, a compiler's constant folder all work the same way. Each is a rule base, a working memory, and an inference engine grinding to a fixpoint.
+
+A modern compiler runs this at scale. Infrastructures like MLIR make declarative rewriting the central abstraction: developers write patterns for how one set of operations can be replaced by a more canonical or efficient set, and the pattern-rewriter driver scans the IR, applies matches, and continues to a fixpoint (or an iteration cap). This is a forward-chaining production system. The facts are IR nodes with their operations, types, and attributes; the rules are the rewrite patterns; the inference engine is the driver. It terminates where the cat rules did not because the IR grammar closes the set of possible facts. Every node has a fixed set of operations and attributes, so the state space is finite.
+
+The closed domain removes the open-world brittleness, but one problem from the GOFAI era survives into the compiler: rule ordering. A forward-chaining rewriter applies rules one at a time and mutates the term in place. An early rewrite can destroy the structure a later, better rewrite needed. Rewriting \\(a \cdot 2\\) to \\(a + a\\) blocks a rule that only matches \\(x \cdot 2\\); the reverse order gives a different program. This is the **phase-ordering problem**. The classic answer is to pick a good order, iterate to a fixpoint, and hope, which is the rule-patching cycle again under another name. The rewriter can lock itself into a local optimum, never seeing the better program that was one destructive rewrite away.
+
+The modern fix drops the destructive step. **Equality saturation**, built on the **e-graph** (a structure from 1970s theorem provers), stops choosing an order at all. It does not rewrite \\(a \cdot 2\\) **into** \\(a + a\\). It records that the two are **equal** and keeps both, packed into an e-graph that holds every equivalent form of the term at once. Rules add equalities instead of replacing terms, so no rewrite can destroy another's precondition. The engine runs every rule until the e-graph stops growing, then extracts the cheapest form. The libraries that made this practical, notably egg, now sit inside ML and tensor compilers, where the space of equivalent programs is enormous and the phase-ordering trap is expensive.[^fn:5] The working memory holds equivalence classes rather than one mutating state, and that is what makes the rewriting order-independent.
+
+Symbolic AI was not wrong as a **mechanism**. It was wrong about **where** that mechanism could run without constant repair. In a formal universe whose boundaries are fixed in advance — algebra, types, IR — the rules can be complete, the engine terminates, and none of the open-world brittleness appears. It did not fail; it moved to the domains where it works, and it runs underneath the compilers and proof checkers in daily use.
+
+The word “inference” is used in both worlds and means opposite things. In the symbolic tradition it is the repeated application of rules until a conclusion is reached; in modern machine learning it is a single forward pass through a trained network. The hardware each one wants follows from that difference.
+
+Symbolic inference runs over graphs of symbols. It chases pointers from one node to the next, and the shape of the traversal depends on the data: which rule fires, which sub-goal to expand. The control flow is irregular. Branches go different ways on adjacent items, memory access is scattered rather than contiguous, and structure is allocated and freed as the working memory grows and shrinks. Nothing about it is uniform. Put a thousand such computations on the parallel lanes of a GPU and they diverge on the first branch. Each lane wants a different path, a different pointer, a different amount of memory. The hardware runs one instruction across many lanes in lockstep, so it stalls on the slowest lane. A GPU running symbolic inference is mostly idle silicon.
+
+Neural inference is the opposite object. It is dense linear algebra: multiply a matrix by a vector, apply a pointwise nonlinearity, repeat. The control flow is fixed regardless of the input values, the same multiply-accumulate over every element, so nothing diverges. Memory is read in large regular strides, the working set is allocated once and reused, and the arithmetic intensity is high. This is the workload the GPU pipeline of Part 2 was built to run.
+
+**The same machine that stalls on the first is ideal for the second.** That mismatch is why the parallel hardware built across Parts 1 and 2 could never have carried Symbolic AI, and why it became the foundation of everything that came after.
+
+
+## Conclusion {#conclusion}
+
+The two paradigms do not stay separate. The most capable modern systems put a neural component where the world is open and a symbolic one where it is closed. AlphaGo pairs neural networks that evaluate a board with Monte Carlo tree search over the game's closed rule structure. The network supplies the intuition the search cannot enumerate; the search supplies the lookahead the network cannot. An LLM with tool use does the same at a larger scale: the model handles the open, language-shaped part, then hands off to a calculator, a SQL engine, or a theorem prover for the steps that have to be exactly right. Other work makes logic itself differentiable, so that rules are **learned** by gradient descent instead of authored. Symbols for closed domains, fitted parameters for open ones: the split is not a border between camps but the seam the hybrids are built along.
+
+Whether behavior is specified in silicon or in rules, hand-authored systems hit the same wall: the limit of what a human can foresee and keep patched. The fixed-function graphics pipeline hit it and moved to programmable shaders. Symbolic AI hit it and, in open domains, had nowhere comparable to go.
+
+The exit was not better rules or faster serial machines to chase them. It was to stop authoring the behavior and fit parameters from data instead — the one workload the parallel hardware was already shaped for. The GPGPU boom and the deep learning that followed are what happened when the workload and the machine finally matched.
+
+How those parameters get fit, stored, and run is the rest of the series.
+
+---
+
+From Pixels to Tensors Series:
+
+-   Part 1: [2D Rendering Baselines](@/technical/pixels-to-tensors/part-1-2d-rendering.md)
+-   Part 2: [The 3D Graphics Pipeline](@/technical/pixels-to-tensors/part-2-3d-pipeline.md)
+-   Part 3: Symbolic AI
+
+---
+
+<br>
+
+**Footnotes**
+
+[^fn:1]: The symbolic-versus-connectionist framing is the conventional way of organizing AI’s intellectual history. Newell and Simon’s 1976 paper remains the clearest single statement of the symbolic position’s strongest claim. The connectionist counter-position received one of its most influential modern formulations in Rumelhart, Hinton, and Williams, “Learning representations by back-propagating errors,” **Nature** 323 (1986).
+[^fn:2]: The term “GOFAI” was coined by John Haugeland in his 1985 book **Artificial Intelligence: The Very Idea** (MIT Press). It was always partly affectionate and partly critical.
+[^fn:3]: Yu, Fagan, Wraith, et al., ["Antimicrobial Selection by a Computer: A Blinded Evaluation by Infectious Disease Experts"](https://jamanetwork.com/journals/jama/article-abstract/366606), **JAMA** 242 (1979), 1279–1282. Eight experts on meningitis rated MYCIN's antibiotic choices against nine human prescribers over ten cases; MYCIN scored 65% acceptable to the faculty specialists' 42.5–62.5%, and never failed to cover a treatable pathogen.
+[^fn:4]: [CoRecursive — Lisp in Space with Ron Garret](https://corecursive.com/lisp-in-space-with-ron-garret/). Garret was on the Remote Agent team at JPL; the interview covers running Common Lisp on Deep Space 1 and debugging the in-flight race condition through the live REPL.
+[^fn:5]: Willsey, Nandi, Wang, Flatt, Tatlock, Panchekha, ["egg: Fast and Extensible Equality Saturation"](https://arxiv.org/abs/2004.03082), POPL 2021. Describes the e-graph rebuilding and equality-saturation workflow behind the `egg` library. E-graphs themselves date to Greg Nelson's work on congruence closure in 1970s theorem provers.
