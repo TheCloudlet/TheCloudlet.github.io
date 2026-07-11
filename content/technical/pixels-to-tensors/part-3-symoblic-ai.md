@@ -3,7 +3,7 @@ title = "From Pixels to Tensors, Part 3: Symbolic AI"
 author = ["Yi-Ping Pan (Cloudlet)"]
 description = "Symbolic AI failed for reasons that have nothing to do with hardware — the knowledge acquisition bottleneck and the unknown unknowns. The parallel machine's role was narrower: to decide which successor could run at scale. Covers the physical symbol system hypothesis, forward chaining, and where symbolic rewriting still lives."
 date = 2026-07-05
-draft = true
+draft = false
 [taxonomies]
   tags = ["symbolic-ai", "gofai", "expert-systems", "forward-chaining", "lisp", "mlir", "pixels-to-tensors"]
   categories = ["machine-learning"]
@@ -201,4 +201,4 @@ From Pixels to Tensors Series:
 [^fn:2]: The term “GOFAI” was coined by John Haugeland in his 1985 book **Artificial Intelligence: The Very Idea** (MIT Press). It was always partly affectionate and partly critical.
 [^fn:3]: Yu, Fagan, Wraith, et al., ["Antimicrobial Selection by a Computer: A Blinded Evaluation by Infectious Disease Experts"](https://jamanetwork.com/journals/jama/article-abstract/366606), **JAMA** 242 (1979), 1279–1282. Eight experts on meningitis rated MYCIN's antibiotic choices against nine human prescribers over ten cases; MYCIN scored 65% acceptable to the faculty specialists' 42.5–62.5%, and never failed to cover a treatable pathogen.
 [^fn:4]: [CoRecursive — Lisp in Space with Ron Garret](https://corecursive.com/lisp-in-space-with-ron-garret/). Garret was on the Remote Agent team at JPL; the interview covers running Common Lisp on Deep Space 1 and debugging the in-flight race condition through the live REPL.
-[^fn:5]: Willsey, Nandi, Wang, Flatt, Tatlock, Panchekha, ["egg: Fast and Extensible Equality Saturation"](https://arxiv.org/abs/2004.03082), POPL 2021. Describes the e-graph rebuilding and equality-saturation workflow behind the `egg` library. E-graphs themselves date to Greg Nelson's work on congruence closure in 1970s theorem provers.
+[^fn:5]: Willsey, Nandi, Wang, Flatt, Tatlock, Panchekha, ["egg: Fast and Extensible Equality Saturation"](https://arxiv.org/abs/2004.03082), POPL 2021. Describes the e-graph rebuilding and equality-saturation workflow behind the `egg` library. E-graphs themselves date to Greg Nelson's work on congruence closure in 1970s theorem provers. For a gentler visual introduction, see Rebecca Swords, ["Introduction to E-Graphs"](https://community-dot-o.llvm.org/slides/WiCT-2023-02-RebeccaSwords.pdf) (Women in Compilers and Tools, 2023), which walks the `(a*2)/2 → a` example step by step.

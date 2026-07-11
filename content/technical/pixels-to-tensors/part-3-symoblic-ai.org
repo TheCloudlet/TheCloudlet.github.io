@@ -2,7 +2,7 @@
 #+DESCRIPTION: Symbolic AI failed for reasons that have nothing to do with hardware — the knowledge acquisition bottleneck and the unknown unknowns. The parallel machine's role was narrower: to decide which successor could run at scale. Covers the physical symbol system hypothesis, forward chaining, and where symbolic rewriting still lives.
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2026-07-05
-#+ZOLA_DRAFT: true
+#+ZOLA_DRAFT: false
 #+ZOLA_SECTION: technical/pixels-to-tensors
 #+ZOLA_CATEGORIES: machine-learning
 #+ZOLA_TAGS: symbolic-ai gofai expert-systems forward-chaining lisp mlir pixels-to-tensors
@@ -195,5 +195,5 @@ From Pixels to Tensors Series:
 
 [fn:4] [[https://corecursive.com/lisp-in-space-with-ron-garret/][CoRecursive — Lisp in Space with Ron Garret]]. Garret was on the Remote Agent team at JPL; the interview covers running Common Lisp on Deep Space 1 and debugging the in-flight race condition through the live REPL.
 
-[fn:5] Willsey, Nandi, Wang, Flatt, Tatlock, Panchekha, [[https://arxiv.org/abs/2004.03082]["egg: Fast and Extensible Equality Saturation"]], POPL 2021. Describes the e-graph rebuilding and equality-saturation workflow behind the =egg= library. E-graphs themselves date to Greg Nelson's work on congruence closure in 1970s theorem provers.
+[fn:5] Willsey, Nandi, Wang, Flatt, Tatlock, Panchekha, [[https://arxiv.org/abs/2004.03082]["egg: Fast and Extensible Equality Saturation"]], POPL 2021. Describes the e-graph rebuilding and equality-saturation workflow behind the =egg= library. E-graphs themselves date to Greg Nelson's work on congruence closure in 1970s theorem provers. For a gentler visual introduction, see Rebecca Swords, [[https://community-dot-o.llvm.org/slides/WiCT-2023-02-RebeccaSwords.pdf]["Introduction to E-Graphs"]] (Women in Compilers and Tools, 2023), which walks the =(a*2)/2 → a= example step by step.
 
