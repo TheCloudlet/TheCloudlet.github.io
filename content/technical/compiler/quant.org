@@ -1,0 +1,1466 @@
+#+TITLE: Understanding Quantization
+#+DESCRIPTION: Notes on ML quantization, QDQ graphs, and fixed-point execution
+#+AUTHOR: Yi-Ping Pan (Cloudlet)
+#+DATE: 2026-07-23
+#+ZOLA_DRAFT: true
+
+#+ZOLA_SECTION:
+#+ZOLA_CATEGORIES: machine-learning
+#+ZOLA_TAGS: quantization mlir onnx qdq fixed-point
+
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . nil) (toc . t))
+
+* Q: What is the purpose of ML quantization?
+
+** MY-PROMPT
+
+Lets discuss ML quantization. What is its purpose?
+
+For example:
+
+- activation: =[2x2xf16]=
+- weight: =[2x2xf16]=
+- operation: =conv=
+
+Quantization 之後還能正確計算嗎？
+
+** ASSISTANT-ANSWER
+
+ML quantization 的目的，是用較低 bit-width 的整數表示原本的浮點 tensor，例如把
+=f32= 或 =f16= 轉成 =int8=、=uint8= 或 =int16=。
+
+主要目的包括：
+
+1. 降低記憶體用量
+2. 降低 memory bandwidth
+3. 加速矩陣乘法、convolution 等核心運算
+4. 讓模型能在 NPU、DSP、MCU、edge device 上有效執行
+5. 降低功耗
+
+量化的基本想法是：不要直接儲存真實浮點值，而是儲存一個整數值，再用 scale 和 zero
+point 來描述它對應到的真實值。
+
+常見公式如下：
+
+#+BEGIN_EXAMPLE
+real_value = scale * (quantized_value - zero_point)
+#+END_EXAMPLE
+
+如果先忽略 zero point，概念可以簡化成：
+
+#+BEGIN_EXAMPLE
+real_value = int_value * scale
+#+END_EXAMPLE
+
+所以 tensor 雖然被存成整數，但只要 scale 記錄正確，就仍然能近似表示原本的浮點值。
+
+以 convolution 為例，activation 和 weight 都可以先量化成整數，再用整數乘加近似原
+本的浮點 convolution。結果不會完全等於原本的浮點結果，但在合適的 calibration 或
+quantization-aware training 下，誤差通常可以控制在模型可接受的範圍內。
+
+* Q: Why are activation and weight quantized separately, but the output is dequantized only once?
+
+** MY-PROMPT
+
+等等，為什麼圖會長這樣？
+
+#+BEGIN_EXAMPLE
+Original:
+
+A -----> Conv -----> B
+W ----/
+
+Quantized:
+
+A -----> Quant ----+
+                   |
+                   v
+                 Conv -----> B_int -----> Dequant -----> B
+                   ^
+                   |
+W -----> Quant ----+
+#+END_EXAMPLE
+
+A 跟 W 各自 Quantize 一次，為什麼最後只需要 Dequantize 一次？不是應該 A 路徑
+Dequantize 一次，W 路徑也 Dequantize 一次嗎？
+
+** ASSISTANT-ANSWER
+
+你的圖是對的，這個架構是合理的。
+
+關鍵原因是：convolution 對 activation 和 weight 的 scale 具有雙線性（bilinear）
+結構，因此兩個 scale 可以合併。
+
+先假設：
+
+#+BEGIN_EXAMPLE
+X = X_int * scale_x
+W = W_int * scale_w
+#+END_EXAMPLE
+
+Convolution 的核心是乘加：
+
+#+BEGIN_EXAMPLE
+Y = sum(X * W)
+#+END_EXAMPLE
+
+代入量化表示：
+
+#+BEGIN_EXAMPLE
+Y = sum((X_int * scale_x) * (W_int * scale_w))
+  = sum(X_int * W_int * scale_x * scale_w)
+  = (scale_x * scale_w) * sum(X_int * W_int)
+  = (scale_x * scale_w) * Y_int32
+#+END_EXAMPLE
+
+因為 =scale_x= 和 =scale_w= 都是常數，可以從 summation 裡面提出來。因此
+convolution 的整數 accumulator 結果 =Y_int32= 只需要在最後乘上：
+
+#+BEGIN_EXAMPLE
+scale_y = scale_x * scale_w
+#+END_EXAMPLE
+
+所以整個圖可以表示成：
+
+#+BEGIN_EXAMPLE
+A -----> Quant(scale_x) ----+
+                            |
+                            v
+                          Conv(int) -----> Y_int32
+                            ^
+                            |
+W -----> Quant(scale_w) ----+
+
+Y_int32 -----> Dequant(scale_x * scale_w) -----> B
+#+END_EXAMPLE
+
+不需要這樣做：
+
+#+BEGIN_EXAMPLE
+A -----> Quant -----> Dequant ----+
+                                  |
+                                  v
+                                Conv(float) -----> B
+                                  ^
+                                  |
+W -----> Quant -----> Dequant ----+
+#+END_EXAMPLE
+
+如果在 A 和 W 兩條路徑上都先 Dequantize，就等於提早回到浮點域，會多做不必要的浮
+點乘法。這在效能和硬體成本上都是浪費。
+
+* Q: How does this relate to ONNX QDQ format?
+
+** MY-PROMPT
+
+這是不是 ONNX 裡面的 QDQ format？
+
+** ASSISTANT-ANSWER
+
+是。這正是 ONNX 常見的 QDQ（Quantize-DeQuantize）表示法。
+
+QDQ graph 通常會顯式標出：
+
+- =QuantizeLinear=
+- =DequantizeLinear=
+- 每個 tensor 對應的 scale
+- 每個 tensor 對應的 zero point
+
+概念上可能長這樣：
+
+#+BEGIN_EXAMPLE
+A_float -----> QuantizeLinear -----> A_int
+W_float -----> QuantizeLinear -----> W_int
+
+A_int, W_int -----> ConvInteger / QuantizedConv -----> Y_int32
+
+Y_int32 -----> DequantizeLinear -----> Y_float
+#+END_EXAMPLE
+
+不過，QDQ graph 主要是給 compiler 和 tooling 看的中介表示。它不代表硬體執行時真
+的會把每個邊界都轉回 float。
+
+在 compiler pipeline 裡，這些 Q/DQ node 常常會被分析、合併、消除，或改寫成更適合
+硬體的 requantize operation。
+
+* Q: Does Dequantize really convert integers back to float during codegen?
+
+** MY-PROMPT
+
+Dequantize node 在實際 codegen 裡，真的會把 int 轉回 float 嗎？
+
+** ASSISTANT-ANSWER
+
+通常不會。
+
+在真正跑在 NPU、DSP 或 edge accelerator 上時，Dequantize 很常被 fuse 掉。
+compiler 會把它改寫成 requantize。
+
+概念如下：
+
+#+BEGIN_EXAMPLE
+A_int8 -----> Conv(int8 x int8 -> int32)
+              |
+              v
+            Y_int32 -----> Requantize -----> Y_int8
+#+END_EXAMPLE
+
+這裡不會真的做：
+
+#+BEGIN_EXAMPLE
+int32 -----> float32 -----> int8
+#+END_EXAMPLE
+
+而是直接做：
+
+#+BEGIN_EXAMPLE
+int32 -----> int8
+#+END_EXAMPLE
+
+這個步驟稱為 requantization。
+
+如果下一層需要的 input scale 是 =scale_next=，而目前 convolution output 的真實
+scale 是：
+
+#+BEGIN_EXAMPLE
+scale_out = scale_x * scale_w
+#+END_EXAMPLE
+
+那麼 requantize 的倍率大致是：
+
+#+BEGIN_EXAMPLE
+requant_scale = scale_out / scale_next
+              = (scale_x * scale_w) / scale_next
+#+END_EXAMPLE
+
+所以 compiler 可以直接把 =Y_int32= 轉成下一層所需的 =int8= 表示，而不必經過
+float。
+
+* Q: Is ML quantization related to communication systems and DSP?
+
+** MY-PROMPT
+
+這不是在通訊系統常用的嗎？
+
+** ASSISTANT-ANSWER
+
+對，這和通訊系統、DSP、fixed-point arithmetic 是同一套數學。
+
+ML quantization 很像 DSP 領域長期使用的幾種技術。
+
+*** Q-format fixed-point
+
+例如 Q15、Q31 在 audio codec、telecom baseband、MCU DSP 裡很常見。資料用整數表示，
+但背後隱含一個 scale。
+
+例如 Q15 可以想成：
+
+#+BEGIN_EXAMPLE
+real_value ~= int16_value / 32768
+#+END_EXAMPLE
+
+這和 ML quantization 的概念很接近：
+
+#+BEGIN_EXAMPLE
+real_value = int_value * scale
+#+END_EXAMPLE
+
+差別主要是 ML 裡的 scale 通常來自 calibration 或 quantization-aware training，而
+傳統 DSP 的 scale 常常由工程師根據演算法手動設計。
+
+*** Block Floating Point
+
+Block Floating Point（BFP）在 FFT、IFFT、5G/LTE baseband 裡很常見。它讓一整組資
+料共用 exponent，而每個元素保留自己的 mantissa。
+
+這和 per-tensor quantization 很像：
+
+#+BEGIN_EXAMPLE
+一個 tensor 共用一個 scale
+每個元素只存整數值
+#+END_EXAMPLE
+
+也就是說：
+
+#+BEGIN_EXAMPLE
+BFP shared exponent  <->  quantization scale
+BFP mantissa         <->  quantized integer value
+#+END_EXAMPLE
+
+*** AGC
+
+AGC（Automatic Gain Control）會把訊號 normalize 到合適的動態範圍，同時記錄用了多
+少 gain。之後如果需要還原，就用 gain 做反向換算。
+
+這也和 quantization scale 的角色很像。
+
+所以 ML quantization 並不是全新的數學。它更像是把 DSP 和通訊系統裡已經使用多年的
+fixed-point 思維，搬到 tensor compiler 和 neural network accelerator 裡。
+
+* Q: If a model has 6000 operations, do we quantize and dequantize every time?
+
+** MY-PROMPT
+
+But if we have 6000 operations, do we quantize and dequantize every time?
+
+** ASSISTANT-ANSWER
+
+不會。
+
+如果 6000 個 op 的每個邊界都做：
+
+#+BEGIN_EXAMPLE
+int -----> float -----> int
+#+END_EXAMPLE
+
+那會產生大量多餘轉換，效能非常差，也會浪費功耗和 bandwidth。
+
+實際 compiler 會盡量形成 quantized island。
+
+*** Quantized island
+
+所謂 quantized island，是指一整段 graph 都留在整數域執行。
+
+例如：
+
+#+BEGIN_EXAMPLE
+float
+  |
+  v
+Quant
+  |
+  v
+Conv -> ReLU -> Conv -> Add -> Conv -> ...
+  |
+  v
+Dequant
+  |
+  v
+float
+#+END_EXAMPLE
+
+中間這整段：
+
+#+BEGIN_EXAMPLE
+Conv -> ReLU -> Conv -> Add -> Conv
+#+END_EXAMPLE
+
+都可以在 =int8= 或 =int32= domain 裡執行。
+
+通常只有在以下位置才需要真的轉換：
+
+1. quantized island 的入口
+2. quantized island 的出口
+3. 遇到不適合量化的 op
+4. 遇到需要較高精度的 op
+
+常見可能留在浮點域的 op 包括：
+
+- Softmax
+- LayerNorm
+- GELU
+- 某些 normalization
+- 某些特殊 activation
+- 對數值精度很敏感的後處理
+
+*** Layer 之間通常是 Requantize，不是 Dequantize
+
+假設第一個 convolution 的輸出是 =int32= accumulator。下一層 convolution 通常希望
+input 是 =int8=。
+
+這時 compiler 不會做：
+
+#+BEGIN_EXAMPLE
+int32 -----> float32 -----> int8
+#+END_EXAMPLE
+
+而會做：
+
+#+BEGIN_EXAMPLE
+int32 -----> requantize -----> int8
+#+END_EXAMPLE
+
+也就是用整數 arithmetic 完成 scale 轉換。
+
+概念上：
+
+#+BEGIN_EXAMPLE
+Y_real = Y_int32 * scale_current
+Y_next_int8 = Y_real / scale_next
+            = Y_int32 * scale_current / scale_next
+#+END_EXAMPLE
+
+所以：
+
+#+BEGIN_EXAMPLE
+Y_next_int8 = Y_int32 * (scale_current / scale_next)
+#+END_EXAMPLE
+
+其中：
+
+#+BEGIN_EXAMPLE
+requant_scale = scale_current / scale_next
+#+END_EXAMPLE
+
+這個 =requant_scale= 在實作上通常不會用浮點乘法，而會轉成 fixed-point multiplier
+和 shift。
+
+* Q: How does Requantize avoid floating-point multiplication?
+
+** MY-PROMPT
+
+Requantize 的 scale ratio 如果是浮點數，硬體上怎麼避免浮點乘法？
+
+** ASSISTANT-ANSWER
+
+常見做法是把浮點倍率轉成 fixed-point multiplier 和 shift。
+
+例如有一個真實倍率：
+
+#+BEGIN_EXAMPLE
+M = 0.0347...
+#+END_EXAMPLE
+
+compiler 會把它近似成：
+
+#+BEGIN_EXAMPLE
+M ~= M0 * 2^(-n)
+#+END_EXAMPLE
+
+其中：
+
+- =M0= 是 fixed-point multiplier
+- =n= 是 shift amount
+
+執行時就可以用整數乘法和位移完成：
+
+#+BEGIN_EXAMPLE
+y_int8 = round(y_int32 * M)
+#+END_EXAMPLE
+
+近似成：
+
+#+BEGIN_EXAMPLE
+tmp = fixed_point_mul(y_int32, M0)
+y_int8 = saturate(tmp >> n)
+#+END_EXAMPLE
+
+在 TFLite、gemmlowp，以及許多 NPU compiler 裡，這是很典型的技巧。
+
+完整概念如下：
+
+#+BEGIN_EXAMPLE
+float scale ratio
+      |
+      v
+compile-time approximation
+      |
+      v
+int multiplier + shift
+      |
+      v
+runtime integer-only requantization
+#+END_EXAMPLE
+
+因此，大部分 quantized inference 可以完全不依賴 FPU。
+
+* Q: How does quantization relate to compiler passes?
+
+** MY-PROMPT
+
+這對 kneron-mlir、ONNX ingestion、precision lowering 有什麼關係？
+
+** ASSISTANT-ANSWER
+
+在 compiler pipeline 裡，QDQ node 通常不是最終執行形式。它們比較像是
+quantization information 的顯式標記。
+
+一個常見流程是：
+
+#+BEGIN_EXAMPLE
+ONNX QDQ graph
+      |
+      v
+Import / ingestion
+      |
+      v
+Canonicalization
+      |
+      v
+Quantization parameter propagation
+      |
+      v
+DQ -> Q pair cancellation
+      |
+      v
+Requantize fusion
+      |
+      v
+Precision lowering
+      |
+      v
+Hardware-specific codegen
+#+END_EXAMPLE
+
+其中一個重要優化是消除相鄰的 Dequantize 和 Quantize。
+
+例如：
+
+#+BEGIN_EXAMPLE
+Y_int -----> Dequant(scale_a) -----> float -----> Quant(scale_b) -----> Z_int
+#+END_EXAMPLE
+
+可以改寫成：
+
+#+BEGIN_EXAMPLE
+Y_int -----> Requant(scale_a / scale_b) -----> Z_int
+#+END_EXAMPLE
+
+這樣就省掉中間的 float round-trip。
+
+這和 constant folding 的精神很像，只是 fold 的對象不是一般常數，而是
+quantization parameters。
+
+* Q: Can multiplying scales cause numerical issues?
+
+** MY-PROMPT
+
+如果 output scale 是 =scale_x * scale_w=，那 scale 相乘會不會有 overflow 或
+underflow 問題？
+
+** ASSISTANT-ANSWER
+
+會有可能。
+
+雖然 scale 通常是浮點數，而且多半在 compile time 就能計算好，但它仍然有數值範圍
+和精度問題。
+
+例如：
+
+#+BEGIN_EXAMPLE
+scale_out = scale_x * scale_w
+#+END_EXAMPLE
+
+如果兩個 scale 都很小，乘積可能接近 denormal，甚至 underflow。如果 scale ratio
+在 requantize 裡變得很大，也可能造成 multiplier 或 shift 設計上的問題。
+
+因此 precision-lowering pass 或 quantization lowering pass 通常需要處理：
+
+- NaN
+- Inf
+- underflow
+- overflow
+- denormal
+- rounding
+- saturation
+- multiplier/shift 的合法範圍
+- backend hardware 支援的 scale 格式
+
+這也是為什麼 quantization lowering 不只是改 type 而已。它同時牽涉數值分析、硬體
+限制，以及 graph rewrite。
+
+* Q: Summary of ML quantization
+
+** MY-PROMPT
+
+整理 ML quantization 的基本概念，特別是：
+
+- quantization 的目的
+- QDQ graphs
+- fixed-point execution
+
+** ASSISTANT-ANSWER
+
+ML quantization 的核心概念可以整理成以下幾點：
+
+1. Quantization 是把浮點 tensor 用整數加 scale 近似表示。
+2. Conv 和 MatMul 的 scale 可以合併，因為乘加對 scale 具有雙線性。
+3. Activation 和 weight 可以各自 quantize，但 output 只需使用合併後的 scale。
+4. QDQ graph 是 compiler-friendly 的表示，不等於 runtime 一定會照著 Q/DQ node 執
+   行。
+5. 實際硬體上通常會用 requantize，而不是反覆 dequantize 到 float。
+6. 大模型不會每個 op 都做 quant/dequant，而是形成 quantized island。
+7. 這套方法和 DSP、通訊系統裡的 fixed-point、Q-format、BFP、AGC 有很深的關係。
+8. Compiler pass 會消除 DQ/Q pair，融合 requantize，並處理 scale 的數值安全性。
+
+* Q: Do we need to scan runtime tensors before quantization?
+
+** MY-PROMPT
+
+But we have no idea the size of scale_x since it's runtime weight. So we all
+need a scan before quant? Maybe, hardware supports find x_weight, scale, and
+mapping?
+
+#+BEGIN_EXAMPLE
+Y = sum((X_int * scale_x) * (W_int * scale_w))
+  = sum(X_int * W_int * scale_x * scale_w)
+  = (scale_x * scale_w) * sum(X_int * W_int)
+  = (scale_x * scale_w) * Y_int32
+#+END_EXAMPLE
+
+** ASSISTANT-ANSWER
+
+要分清楚：=scale_w= 和 =scale_x= 通常來源不一樣。
+
+*** Weight scale 通常不是 runtime 才知道
+
+大部分 inference model 裡，weight 是 constant：
+
+#+BEGIN_EXAMPLE
+W = model parameter
+#+END_EXAMPLE
+
+所以 =scale_w= 可以在 compile time / conversion time 就算好。
+
+例如 per-tensor weight quantization：
+
+#+BEGIN_EXAMPLE
+scale_w = max(abs(W_float)) / 127
+W_int8  = round(W_float / scale_w)
+#+END_EXAMPLE
+
+或 per-channel weight quantization：
+
+#+BEGIN_EXAMPLE
+scale_w[c] = max(abs(W_float[c])) / 127
+#+END_EXAMPLE
+
+所以 weight 不需要 runtime scan。compiler / quantizer 在離線階段已經知道。
+
+*** Activation scale 有兩種做法
+
+Activation =X= 才是 runtime input，所以 =scale_x= 的處理方式分成兩派。
+
+**** Static quantization / calibration
+
+這是 edge inference / NPU 最常見做法。
+
+先用 representative dataset 跑過模型，收集 activation range：
+
+#+BEGIN_EXAMPLE
+X_min, X_max
+#+END_EXAMPLE
+
+然後離線決定：
+
+#+BEGIN_EXAMPLE
+scale_x = (X_max - X_min) / 255
+zero_x  = ...
+#+END_EXAMPLE
+
+之後真正 inference 時，就固定使用這組 scale。
+
+所以 runtime 不需要每次 scan activation。
+
+流程是：
+
+#+BEGIN_EXAMPLE
+Calibration data
+      |
+      v
+Run model and collect activation ranges
+      |
+      v
+Decide scale_x / zero_x for each tensor
+      |
+      v
+Compile quantized model
+      |
+      v
+Runtime uses fixed scales
+#+END_EXAMPLE
+
+這就是 Post-Training Static Quantization。
+
+**** Dynamic quantization
+
+另一種做法是 runtime 真的掃 activation，找 min/max，再決定 scale。
+
+例如：
+
+#+BEGIN_EXAMPLE
+X_runtime
+   |
+   v
+find min/max
+   |
+   v
+compute scale_x
+   |
+   v
+quantize X
+   |
+   v
+int8 matmul / conv
+#+END_EXAMPLE
+
+這叫 dynamic quantization。
+
+但它有成本：
+
+- 要多一次 scan
+- 要算 min/max
+- 要算 scale
+- 可能增加 latency
+- 對 streaming / tiled hardware 比較麻煩
+
+所以 NPU compiler 通常比較喜歡 static calibrated scale。
+
+*** Hardware 可能支援 runtime range finding，但不是必要
+
+有些硬體可以支援：
+
+- min/max reduction
+- dynamic scaling
+- block floating point exponent selection
+- per-tile scale
+- activation clamp statistics
+
+這在 DSP、BFP、以及部分 accelerators 裡很常見。
+
+但一般 ONNX QDQ / int8 inference 的典型模型是：
+
+#+BEGIN_EXAMPLE
+scale 已經在 model 裡
+hardware 只負責照 scale 做 quant / requant / saturate
+#+END_EXAMPLE
+
+不是每次都重新找 scale。
+
+*** 所以原式裡的 scale 通常是已知的
+
+對 convolution：
+
+#+BEGIN_EXAMPLE
+Y = sum((X_int * scale_x) * (W_int * scale_w))
+  = (scale_x * scale_w) * sum(X_int * W_int)
+#+END_EXAMPLE
+
+其中：
+
+- =scale_w=：由 weight 離線量化得到
+- =scale_x=：通常由 calibration 離線得到
+- =scale_x * scale_w=：compile time 可算
+- requant multiplier / shift：compile time 可算
+
+runtime 主要做：
+
+#+BEGIN_EXAMPLE
+int8 x int8 -> int32 accumulate -> requantize -> int8
+#+END_EXAMPLE
+
+而不是：
+
+#+BEGIN_EXAMPLE
+scan -> compute scale -> quantize -> conv
+#+END_EXAMPLE
+
+除非模型或 backend 明確使用 dynamic quantization。
+
+*** 簡短結論
+
+不一定需要 runtime scan。
+
+通常：
+
+#+BEGIN_EXAMPLE
+Weight scale      : compile time known
+Activation scale  : calibration time known
+Requant scale     : compile time known
+Runtime           : integer arithmetic only
+#+END_EXAMPLE
+
+* Q: What are common quantization techniques and trade-offs?
+
+** MY-PROMPT
+
+1)
+What are the different quantilization techniques, and why are the trade-offs. I
+know quant are also important for image processing like JPEG, H264...
+
+2) 有什麼特色？
+
+#+BEGIN_SRC
+定点值 = 浮点值 * scale * 2^radix浮点近似 = 定点值 * 2^(-radix) / scale
+#+END_SRC
+
+** ASSISTANT-ANSWER
+
+下面分兩部分整理：
+
+1. ML / DSP / codec 常見 quantization techniques 和 trade-off
+2. 你寫的公式代表什麼，以及它的特色
+
+*** ML quantization
+
+Quantization 本質上是：
+
+#+BEGIN_EXAMPLE
+用有限 bit 數表示連續值或高精度值
+#+END_EXAMPLE
+
+所以它不只出現在 ML，也出現在：
+
+- JPEG
+- H.264 / H.265 / AV1
+- audio codec
+- modem / communication
+- DSP fixed-point
+- sensor / ADC
+- neural network inference
+
+但不同領域的目標不完全一樣。
+
+**** Post-Training Static Quantization, PTQ static
+
+這是 edge / NPU inference 最常見的一種。
+
+流程：
+
+#+BEGIN_EXAMPLE
+float model
+   |
+   v
+calibration dataset
+   |
+   v
+collect activation ranges
+   |
+   v
+choose scale / zero point
+   |
+   v
+int8 model
+#+END_EXAMPLE
+
+特色：
+
+- weight scale 離線算好
+- activation scale 用 calibration dataset 估計
+- runtime 不需要每次掃 min/max
+- 適合 NPU / DSP / MCU
+
+優點：
+
+- inference 快
+- 硬體友善
+- 不需要重新訓練
+- compiler 可以提前算好 requant multiplier / shift
+
+缺點：
+
+- calibration data 不代表真實資料時，精度會掉
+- outlier 會影響 scale
+- 對 transformer / LLM 有時比較困難
+
+**** Post-Training Dynamic Quantization
+
+runtime 才決定 activation scale。
+
+#+BEGIN_EXAMPLE
+runtime activation
+   |
+   v
+find min/max
+   |
+   v
+compute scale
+   |
+   v
+quantize
+   |
+   v
+int8 GEMM
+#+END_EXAMPLE
+
+常見於 CPU 上的 linear / matmul，尤其 NLP model。
+
+優點：
+
+- 不需要 calibration dataset
+- activation range 比 static 更貼近當下 input
+- 對某些模型精度較穩
+
+缺點：
+
+- runtime 要多做 min/max scan
+- latency 增加
+- 對 NPU / streaming pipeline 不一定友善
+- scale 不是 compile-time constant，compiler 優化較少
+
+**** Quantization-Aware Training, QAT
+
+訓練時就模擬 quantization noise。
+
+#+BEGIN_EXAMPLE
+training forward pass:
+float weight/activation
+   |
+ fake quant / fake dequant
+   |
+ loss
+   |
+ backward
+#+END_EXAMPLE
+
+優點：
+
+- 精度通常最好
+- 適合 int8 甚至 int4
+- 對 activation-sensitive 的模型較有效
+
+缺點：
+
+- 需要重新訓練
+- training pipeline 複雜
+- 成本最高
+
+**** Weight-only quantization
+
+只量化 weight，不量化 activation。
+
+常見於 LLM：
+
+#+BEGIN_EXAMPLE
+W: int8 / int4
+X: fp16 / bf16
+MatMul: mixed precision
+#+END_EXAMPLE
+
+優點：
+
+- 大幅降低模型大小
+- 減少 memory bandwidth
+- 對 LLM 很有效
+- activation 保持高精度，精度較穩
+
+缺點：
+
+- compute 不一定完全 int8
+- activation memory 沒省
+- 硬體需要支援 mixed precision
+
+**** Per-tensor vs per-channel quantization
+
+Per-tensor quantization 是整個 tensor 共用一組 scale：
+
+#+BEGIN_EXAMPLE
+W_int = round(W_float / scale_w)
+#+END_EXAMPLE
+
+優點：
+
+- 簡單
+- metadata 少
+- 硬體容易
+
+缺點：
+
+- 如果不同 channel range 差很多，誤差大
+
+Per-channel quantization 是每個 output channel 一組 scale，常用於 convolution
+weight：
+
+#+BEGIN_EXAMPLE
+W_int[c] = round(W_float[c] / scale_w[c])
+#+END_EXAMPLE
+
+優點：
+
+- 精度明顯更好
+- 對 conv / matmul weight 很常用
+
+缺點：
+
+- scale metadata 較多
+- requantization 較複雜
+- hardware 需要支援 channel-wise scale
+
+**** Symmetric vs asymmetric quantization
+
+Symmetric quantization：
+
+#+BEGIN_EXAMPLE
+real = scale * q
+zero_point = 0
+#+END_EXAMPLE
+
+常用於 signed int8：
+
+#+BEGIN_EXAMPLE
+q in [-127, 127] or [-128, 127]
+#+END_EXAMPLE
+
+優點：
+
+- 乘加簡單
+- weight 常用 symmetric
+- hardware 友善
+
+缺點：
+
+- 如果資料分布不是以 0 為中心，range 利用率較差
+
+Asymmetric quantization：
+
+#+BEGIN_EXAMPLE
+real = scale * (q - zero_point)
+#+END_EXAMPLE
+
+常用於 activation uint8 / int8。
+
+優點：
+
+- 可表示非對稱 range
+- activation 通常精度較好
+
+缺點：
+
+- MAC 裡 zero point correction 較麻煩
+- hardware / compiler 要處理 offset
+
+**** Uniform vs non-uniform quantization
+
+Uniform quantization 的量化 level 間距固定：
+
+#+BEGIN_EXAMPLE
+q = round(real / scale)
+#+END_EXAMPLE
+
+優點：
+
+- 最常見
+- 硬體簡單
+- 乘法 / shift 好做
+
+缺點：
+
+- 對 outlier 敏感
+- 對非均勻分布不是最優
+
+Non-uniform quantization 的量化 level 不等距，例如：
+
+- logarithmic quantization
+- k-means quantization
+- codebook quantization
+- vector quantization
+
+優點：
+
+- 可以更貼合資料分布
+- 低 bit，例如 4-bit / 2-bit 時可能更準
+
+缺點：
+
+- 硬體複雜
+- 常需要 lookup table
+- compiler lowering 較難
+
+**** Integer-only vs mixed-precision quantization
+
+Integer-only quantization：
+
+#+BEGIN_EXAMPLE
+int8 x int8 -> int32 accumulate -> requant -> int8
+#+END_EXAMPLE
+
+優點：
+
+- NPU / DSP / MCU 友善
+- 省電
+- latency 低
+
+缺點：
+
+- 精度調校較難
+- 某些 op 不適合 int
+
+Mixed precision quantization 讓不同 op 用不同精度：
+
+#+BEGIN_EXAMPLE
+Conv: int8
+LayerNorm: fp16
+Softmax: fp16
+MatMul: int8/fp16 mixed
+#+END_EXAMPLE
+
+優點：
+
+- 精度和性能可折衷
+- transformer 常用
+
+缺點：
+
+- graph partition 複雜
+- dtype conversion 多
+- compiler pass 更麻煩
+
+*** DSP / communication quantization
+
+DSP 裡通常叫 fixed-point design。
+
+常見形式：
+
+#+BEGIN_EXAMPLE
+Q15, Q31, Qm.n
+#+END_EXAMPLE
+
+例如 Q15：
+
+#+BEGIN_EXAMPLE
+real ~= int16 / 32768
+#+END_EXAMPLE
+
+特色：
+
+- scale 常常是 2 的次方
+- multiplication 後要 shift
+- 每一步都要考慮 overflow / saturation
+- 工程師會手動安排 radix point
+
+Trade-off：
+
+- scale 為 power-of-two，硬體非常便宜
+- 但 range / precision 沒有任意 scale 靈活
+- 很適合 filter、FFT、baseband、audio pipeline
+
+*** Image / video codec quantization
+
+JPEG / H.264 的 quantization 目的和 ML 不太一樣。
+
+ML quantization 目標通常是：
+
+#+BEGIN_EXAMPLE
+加速 inference，同時保持模型精度
+#+END_EXAMPLE
+
+Codec quantization 目標是：
+
+#+BEGIN_EXAMPLE
+壓縮資料，允許視覺上可接受的失真
+#+END_EXAMPLE
+
+**** JPEG
+
+流程大概是：
+
+#+BEGIN_EXAMPLE
+image block
+   |
+   v
+DCT
+   |
+   v
+divide by quantization table
+   |
+   v
+round
+   |
+   v
+entropy coding
+#+END_EXAMPLE
+
+JPEG quantization：
+
+#+BEGIN_EXAMPLE
+Q_coeff = round(DCT_coeff / Q_table[i])
+#+END_EXAMPLE
+
+特色：
+
+- 高頻係數通常量化更粗
+- 利用人眼對高頻細節較不敏感
+- quantization table 控制品質 / bitrate
+
+Trade-off：
+
+- quantization 越粗，檔案越小
+- 但 block artifact / ringing 越明顯
+
+**** H.264 / H.265
+
+Video codec 也會 transform + quantize：
+
+#+BEGIN_EXAMPLE
+prediction residual
+   |
+   v
+transform
+   |
+   v
+quantization
+   |
+   v
+entropy coding
+#+END_EXAMPLE
+
+特色：
+
+- quantization parameter, QP, 控制壓縮強度
+- QP 越大，量化越粗，bitrate 越低
+- 會搭配 motion compensation / intra prediction
+
+Trade-off：
+
+- bitrate
+- PSNR / SSIM / visual quality
+- encoder complexity
+- latency
+
+*** 總結比較
+
+#+BEGIN_EXAMPLE
+ML quantization:
+  goal = faster/smaller inference
+  error metric = task accuracy
+  scale = learned/calibrated
+  execution = integer/fixed-point compute
+
+JPEG/H264 quantization:
+  goal = compression
+  error metric = perceptual quality / bitrate
+  scale = quant table / QP
+  execution = transform coefficient rounding
+
+DSP quantization:
+  goal = fixed-point real-time implementation
+  error metric = numeric SNR / stability
+  scale = engineered radix/scaling
+  execution = integer arithmetic
+#+END_EXAMPLE
+
+*** 關於公式：定点值 = 浮点值 * scale * 2^radix
+
+你寫的是一種 fixed-point encoding：
+
+#+BEGIN_SRC
+定点值 = 浮点值 * scale * 2^radix浮点近似 = 定点值 * 2^(-radix) / scale
+#+END_SRC
+
+也就是說，真實值不是直接存成 float，而是存成 integer / fixed-point。
+
+可以改寫成：
+
+#+BEGIN_EXAMPLE
+fixed = round(real * scale * 2^radix)
+
+real ~= fixed / (scale * 2^radix)
+     = fixed * 2^(-radix) / scale
+#+END_EXAMPLE
+
+其中：
+
+- =fixed=：實際儲存的整數
+- =real=：原本浮點值
+- =scale=：額外縮放因子
+- =radix=：binary point 位置
+- =2^radix=：代表小數位數解析度
+
+**** 特色 1：把任意 scale 和 power-of-two scale 分開
+
+ML 常見公式是：
+
+#+BEGIN_EXAMPLE
+real = int * S
+#+END_EXAMPLE
+
+你的公式等價於：
+
+#+BEGIN_EXAMPLE
+real = fixed * 2^(-radix) / scale
+#+END_EXAMPLE
+
+所以 effective scale 是：
+
+#+BEGIN_EXAMPLE
+S_eff = 2^(-radix) / scale
+#+END_EXAMPLE
+
+也就是：
+
+#+BEGIN_EXAMPLE
+real = fixed * S_eff
+#+END_EXAMPLE
+
+這和 ML quantization 其實同型。
+
+差別是它把 scale 拆成兩部分：
+
+#+BEGIN_EXAMPLE
+S_eff = arbitrary_scale * power_of_two_scale
+#+END_EXAMPLE
+
+或以你的寫法：
+
+#+BEGIN_EXAMPLE
+S_eff = 1 / (scale * 2^radix)
+#+END_EXAMPLE
+
+**** 特色 2：radix 可以用 shift 實作
+
+因為：
+
+#+BEGIN_EXAMPLE
+2^radix
+#+END_EXAMPLE
+
+是 2 的次方，所以硬體上很便宜。
+
+例如：
+
+#+BEGIN_EXAMPLE
+fixed = real * scale * 2^radix
+#+END_EXAMPLE
+
+反推時：
+
+#+BEGIN_EXAMPLE
+real ~= fixed >> radix
+#+END_EXAMPLE
+
+概念上就是 shift。
+
+所以 =radix= 的好處是：
+
+- multiplication / division by power-of-two 可用 shift
+- 硬體便宜
+- DSP 友善
+- 適合 fixed-point pipeline
+
+**** 特色 3：scale 提供更細緻的動態範圍控制
+
+只有 radix 的話，就是傳統 Q-format：
+
+#+BEGIN_EXAMPLE
+real ~= fixed * 2^(-radix)
+#+END_EXAMPLE
+
+但加上 =scale= 後：
+
+#+BEGIN_EXAMPLE
+real ~= fixed * 2^(-radix) / scale
+#+END_EXAMPLE
+
+可以表示更彈性的 dynamic range。
+
+例如只用 =radix= 時，scale 只能是 2 的次方。
+
+加上 =scale= 後，可以是：
+
+#+BEGIN_EXAMPLE
+0.0173
+0.125
+3.7
+...
+#+END_EXAMPLE
+
+這比較像 ML quantization 裡的 arbitrary scale。
+
+**** 特色 4：需要處理 rounding 和 saturation
+
+實際上不會只做：
+
+#+BEGIN_EXAMPLE
+fixed = real * scale * 2^radix
+#+END_EXAMPLE
+
+通常要：
+
+#+BEGIN_EXAMPLE
+fixed = saturate(round(real * scale * 2^radix))
+#+END_EXAMPLE
+
+因為 fixed value 有 bit-width 限制。
+
+例如 int8：
+
+#+BEGIN_EXAMPLE
+fixed in [-128, 127]
+#+END_EXAMPLE
+
+int16：
+
+#+BEGIN_EXAMPLE
+fixed in [-32768, 32767]
+#+END_EXAMPLE
+
+如果超過範圍，要 clamp / saturate。
+
+**** 特色 5：precision 和 range trade-off
+
+假設 fixed 是 int16。
+
+如果 =radix= 大：
+
+#+BEGIN_EXAMPLE
+2^radix 大
+step size 小
+precision 高
+可表示 range 變小
+#+END_EXAMPLE
+
+如果 =radix= 小：
+
+#+BEGIN_EXAMPLE
+step size 大
+precision 低
+可表示 range 變大
+#+END_EXAMPLE
+
+所以 radix 控制：
+
+#+BEGIN_EXAMPLE
+fraction bits vs integer range
+#+END_EXAMPLE
+
+這就是 fixed-point 設計最核心的 trade-off。
+
+**** 特色 6：和 requantize 很像
+
+ML inference 裡常見：
+
+#+BEGIN_EXAMPLE
+Y_int8 = round(Y_int32 * scale_current / scale_next)
+#+END_EXAMPLE
+
+這個 ratio 通常會近似成：
+
+#+BEGIN_EXAMPLE
+multiplier * 2^(-shift)
+#+END_EXAMPLE
+
+也就是：
+
+#+BEGIN_EXAMPLE
+Y_int8 = saturate(round(Y_int32 * multiplier >> shift))
+#+END_EXAMPLE
+
+這和你的：
+
+#+BEGIN_EXAMPLE
+scale * 2^radix
+#+END_EXAMPLE
+
+其實是同一種思想：
+
+#+BEGIN_EXAMPLE
+任意倍率 + binary shift
+#+END_EXAMPLE
+
+*** 簡短結論
+
+你的公式描述的是一種 fixed-point quantization：
+
+#+BEGIN_SRC
+fixed = round(float * scale * 2^radix) float ~= fixed * 2^(-radix) / scale
+#+END_SRC
+
+它的特色是：
+
+- 用整數存浮點近似值
+- =radix= 決定 binary point 位置
+- =scale= 提供額外動態範圍調整
+- =2^radix= 可以用 shift 實作
+- 需要 rounding / saturation
+- 本質上和 ML int quantization、DSP Q-format、requantize multiplier/shift 是同一
+  類技術
