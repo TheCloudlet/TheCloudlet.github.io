@@ -1,0 +1,378 @@
+#+TITLE: Emacs Setup for LLVM and MLIR Compiler Work
+#+DESCRIPTION: Doom Emacs configuration notes for ONNX artifacts, MLIR/TableGen modes, C++ tree-sitter indentation, and selected-line clang-format.
+#+AUTHOR: Yi-Ping Pan (Cloudlet)
+#+DATE: 2026-07-31
+#+ZOLA_DRAFT: true
+
+#+ZOLA_SECTION: technical/emacs
+#+ZOLA_CATEGORIES: emacs compiler
+#+ZOLA_TAGS: emasc llvm mlir tablegen tree-sitter clang-format onnx netron
+
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (toc . t))
+
+* Intro
+
+After five weeks of NPU compiler work across several codebases, I ended up
+keeping a small set of Emacs changes that made the MLIR/LLVM editing loop
+smoother.
+
+* Open Model Artifacts from Dired
+
+Compiler debugging produces model artifacts next to logs, generated IR, and
+temporary directories. Opening an =.onnx= file usually means leaving Dired,
+switching to a file manager, starting Netron, and then returning to Emacs after
+the browser opens.
+
+The required input state is already present in Dired: the file at point. The
+command only needs to turn that file into an absolute path, stop the previous
+Netron process started by Emacs, and start Netron for the selected model.
+
+#+BEGIN_SRC text
+Dired file at point
+-> absolute model path
+-> stop previous Emacs-owned Netron process
+-> start Netron for this model
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(require 'subr-x)
+
+(defvar cloudlet/netron-process nil
+  "Process object for the Netron server started by `cloudlet/open-onnx'.")
+
+(defun cloudlet/netron-executable ()
+  "Return the Netron executable path, or signal a user error."
+  (or (executable-find "netron")
+      (user-error "netron not found in PATH")))
+
+(defun cloudlet/netron-model-path-at-point ()
+  "Return an ONNX model path from Dired or filename at point, or nil."
+  (cond
+   ((derived-mode-p 'dired-mode)
+    (ignore-errors
+      (dired-get-filename nil t)))
+   (t
+    (let ((filename (thing-at-point 'filename t)))
+      (when (and filename
+                 (not (string-empty-p filename)))
+        (expand-file-name filename))))))
+#+END_SRC
+
+Only the Netron process started by this Emacs command is tracked. Existing
+unrelated Netron processes are not killed.
+
+The command validates the file path, replaces the previous Emacs-owned Netron
+process, and starts Netron with the selected model.
+
+#+BEGIN_SRC emacs-lisp
+(defun cloudlet/open-onnx (&optional host-mode)
+  "Open model with Netron. Works in Dired or with filename at point.
+With prefix argument HOST-MODE, serve Netron on <your_ip>."
+  (interactive "P")
+  (let ((model-path (cloudlet/netron-model-path-at-point)))
+    (unless (and model-path (file-exists-p model-path))
+      (user-error "No existing model file found at point"))
+    (when (process-live-p cloudlet/netron-process)
+      (delete-process cloudlet/netron-process))
+    (let* ((netron (shell-quote-argument (cloudlet/netron-executable)))
+           (quoted-model-path (shell-quote-argument model-path))
+           (cmd (if host-mode
+                    (format "%s --host <your_ip> %s"
+                            netron quoted-model-path)
+                  (format "%s -b %s" netron quoted-model-path))))
+      (setq cloudlet/netron-process
+            (start-process-shell-command "netron" nil cmd)))))
+#+END_SRC
+
+The Dired binding uses =O= in normal state.
+
+#+BEGIN_SRC emacs-lisp
+(after! dired
+  (map! :map dired-mode-map
+        :n "O" #'cloudlet/open-onnx))
+#+END_SRC
+
+* Load MLIR and TableGen Modes from LLVM
+
+Emacs does not highlight or indent =.td= and =.mlir= files properly by default.
+LLVM keeps Emacs modes for MLIR assembly and TableGen in the =llvm-project=
+tree. The files track upstream syntax, but using them through a remote package
+recipe would clone too much source for a mode setup. The compiler checkout
+already exists on my work machine.
+
+I want Doom to use the mode files from my local LLVM checkout when it exists,
+and do nothing on machines without LLVM. I use =LLVM_SRC= instead of hard-coding
+the checkout path in my dotfiles.
+
+#+BEGIN_SRC text
+LLVM_SRC
+-> mlir/utils/emacs/mlir-mode.el
+-> mlir/utils/emacs/mlir-lsp-client.el
+-> llvm/utils/emacs/tablegen-mode.el
+#+END_SRC
+
+In =packages.el=, I only declare these local packages when the expected
+directories exist. =package!= is a macro, so the computed paths are spliced into
+the recipe with =eval= and a backquoted form.
+
+#+BEGIN_SRC emacs-lisp
+(let ((llvm-src (getenv "LLVM_SRC")))
+  (when llvm-src
+    (let ((mlir-emacs (expand-file-name "mlir/utils/emacs" llvm-src))
+          (llvm-emacs (expand-file-name "llvm/utils/emacs" llvm-src)))
+
+      (when (file-directory-p mlir-emacs)
+        (eval `(package! mlir-mode
+                 :recipe (:local-repo ,mlir-emacs
+                          :build (:not compile)
+                          :files ("mlir-mode.el" "mlir-lsp-client.el")))))
+
+      (when (file-directory-p llvm-emacs)
+        (eval `(package! tablegen-mode
+                 :recipe (:local-repo ,llvm-emacs
+                          :build (:not compile)
+                          :files ("tablegen-mode.el"))))))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(after! mlir-mode
+  (add-to-list 'auto-mode-alist '("\\.mlir\\'" . mlir-mode)))
+
+(after! tablegen-mode
+  (add-to-list 'auto-mode-alist '("\\.td\\'" . tablegen-mode)))
+#+END_SRC
+
+The mode association is direct: =.mlir= opens in =mlir-mode=, and =.td= opens in
+=tablegen-mode=.
+
+I use the same local defaults for both modes: two-space indentation, no tabs, an
+80-column guide, and relative line numbers.
+
+#+BEGIN_SRC emacs-lisp
+(dolist (hook '(mlir-mode-hook tablegen-mode-hook))
+  (add-hook hook
+            (lambda ()
+              (setq-local tab-width 2
+                          indent-tabs-mode nil
+                          fill-column 80
+                          display-fill-column-indicator-column 80
+                          display-line-numbers 'relative)
+              (display-line-numbers-mode 1))))
+#+END_SRC
+
+TableGen LSP is optional. If =tblgen-lsp-server= exists in =PATH= or
+=MY_TBLGEN_LSP= points to an executable, the client is registered. Otherwise the
+mode still loads without LSP.
+
+#+BEGIN_SRC emacs-lisp
+(defvar tblgen-lsp-binary
+  (let ((env-path (getenv "MY_TBLGEN_LSP")))
+    (or (and env-path (file-executable-p env-path) env-path)
+        (executable-find "tblgen-lsp-server")))
+  "Path to tblgen-lsp-server, or nil if not installed.")
+
+(after! lsp-mode
+  (when tblgen-lsp-binary
+    (add-to-list 'lsp-language-id-configuration '(tablegen-mode . "tablegen"))
+    (lsp-register-client
+     (make-lsp-client
+      :new-connection (lsp-stdio-connection
+                       (lambda () (list tblgen-lsp-binary)))
+      :activation-fn (lsp-activate-on "tablegen")
+      :server-id 'tblgen-lsp
+      :priority -1))
+    (add-hook 'tablegen-mode-hook #'lsp-deferred)))
+#+END_SRC
+
+* Use Block Indentation for C++ Tree-Sitter
+
+MLIR and LLVM C++ code repeatedly forms the same syntax pattern: a long template
+name followed by an argument list. Visitor dispatch, LLVM type matching, and
+MLIR builders all hit this shape.
+
+#+BEGIN_SRC cpp
+visitor.Case<SomeLongOperationPattern>(state, value, context);
+value.dyn_cast<SomeLongTensorLikeType>();
+rewriter.create<SomeGeneratedLikeOp>(loc, resultType, input, attrs);
+#+END_SRC
+
+Default =c++-ts-mode= uses visual alignment for these nodes. Adding a new
+argument or splitting template arguments moves the inserted line under the
+opening punctuation.
+
+#+BEGIN_SRC cpp
+// Add new arguments.
+visitor.Case<SomeLongOperationPattern>(
+                                      state, value, context
+                                      );
+
+// Add or split template arguments.
+visitor.Case<
+             SomeLongOperationPattern
+            >(state, value, context);
+#+END_SRC
+
+I want block indentation for these C++ patterns while leaving the rest of
+=c++-ts-mode= intact. The target state is one indentation level from the parent
+line, not visual alignment to the opening parenthesis.
+
+#+BEGIN_SRC cpp
+visitor.Case<SomeLongOperationPattern>(
+  state, value, context);
+
+rewriter.create<SomeGeneratedLikeOp>(
+  loc, resultType, input, attrs);
+#+END_SRC
+
+The configuration boundary is =c-ts-mode-indent-style=. Clangd on-type
+formatting is a separate input path. I tested four combinations:
+
+#+BEGIN_SRC text
+A  = use a custom c-ts-mode indentation style
+B  = disable lsp-enable-on-type-formatting
+
+A & B      -> new argument line: 4,  closing paren: 2
+!A & B     -> new argument line: 37, closing paren: 37
+A & !B     -> new argument line: 4,  closing paren: 2
+!A & !B    -> new argument line: 37, closing paren: 37
+#+END_SRC
+
+Only =A= changes the indentation result. Disabling clangd on-type formatting
+does not change Emacs' own =RET= indentation path.
+
+The fix is a C++-specific tree-sitter indentation style for =c++-ts-mode=. This
+intentionally changes all tree-sitter nodes whose parent is =argument_list= or
+=template_argument_list=, then falls back to GNU-style =c-ts-mode= rules for the
+remaining cases.
+
+#+BEGIN_SRC emacs-lisp
+(after! c-ts-mode
+  (setq c-ts-mode-indent-offset 2)
+
+  (defun cloudlet/c++-ts-indent-style ()
+    "GNU-like C++ tree-sitter indentation with softer MLIR call args."
+    (let ((base (cdr (assq 'gnu (c-ts-mode--indent-styles 'cpp)))))
+      `(((node-is ")") parent-bol 0)
+        ((parent-is "^argument_list$") parent-bol c-ts-mode-indent-offset)
+        ((parent-is "^template_argument_list$") parent-bol c-ts-mode-indent-offset)
+        ,@base)))
+
+  (add-hook 'c++-ts-mode-hook
+            (lambda ()
+              (c-ts-mode-set-style #'cloudlet/c++-ts-indent-style))))
+#+END_SRC
+
+Clangd on-type formatting remains disabled for C and C++ buffers to keep a
+second formatter from applying edits while typing. It is not the fix for this
+indentation case.
+
+#+BEGIN_SRC emacs-lisp
+(after! lsp-mode
+  (add-hook 'c++-ts-mode-hook
+            (lambda ()
+              (setq-local lsp-enable-on-type-formatting nil)))
+  (add-hook 'c-ts-mode-hook
+            (lambda ()
+              (setq-local lsp-enable-on-type-formatting nil))))
+#+END_SRC
+
+* Format Selected Lines with Clang-Format
+
+Full-buffer formatting changes too much state for active compiler patches. A
+small semantic edit can become a large review diff when the formatter rewrites
+unrelated lines.
+
+Goal: select a region, press a keybinding, and run =clang-format= only on the
+selected lines.
+
+#+BEGIN_SRC text
+Visual selection
+-> compute selected line range
+-> save the current file
+-> ask for confirmation
+-> clang-format -i --lines=x:y file.cpp
+-> revert the buffer from disk
+#+END_SRC
+
+Resolve =clang-format= from =PATH= first, then from =MY_CLANG_FORMAT=. If
+neither exists, fail before modifying the file.
+
+#+BEGIN_SRC emacs-lisp
+(defun cloudlet/clang-format-executable ()
+  "Return a clang-format executable path, or signal a user error."
+  (or (executable-find "clang-format")
+      (let ((path (getenv "MY_CLANG_FORMAT")))
+        (and path (file-executable-p path) path))
+      (user-error "clang-format not found in PATH or MY_CLANG_FORMAT")))
+#+END_SRC
+
+The region bounds are converted to 1-based line numbers for =--lines=x:y=. If
+the region ends at the beginning of a line, that final line is not included.
+
+#+BEGIN_SRC emacs-lisp
+(defun cloudlet/region-line-range (beg end)
+  "Return a cons of 1-based line numbers covered by BEG and END."
+  (let* ((start (min beg end))
+         (finish (max beg end))
+         (finish (if (and (> finish start)
+                          (save-excursion
+                            (goto-char finish)
+                            (bolp)))
+                     (1- finish)
+                   finish)))
+    (cons (line-number-at-pos start)
+          (line-number-at-pos finish))))
+#+END_SRC
+
+The command saves the file, asks for confirmation, runs =clang-format= in place,
+and reloads the buffer after a successful exit.
+
+#+BEGIN_SRC emacs-lisp
+(defun cloudlet/clang-format-region-lines (beg end)
+  "Run clang-format on the selected line range."
+  (interactive "r")
+  (unless buffer-file-name
+    (user-error "Current buffer is not visiting a file"))
+  (unless (use-region-p)
+    (user-error "No active region"))
+
+  (let* ((clang-format (cloudlet/clang-format-executable))
+         (file buffer-file-name)
+         (range (cloudlet/region-line-range beg end))
+         (line-arg (format "--lines=%d:%d" (car range) (cdr range))))
+    (save-buffer)
+    (unless (yes-or-no-p
+             (format "Run clang-format on %s lines %d:%d? "
+                     (file-name-nondirectory file)
+                     (car range)
+                     (cdr range)))
+      (user-error "Aborted"))
+    (let ((exit-code (call-process clang-format nil "*clang-format*" nil
+                                   "-i" line-arg file)))
+      (unless (zerop exit-code)
+        (user-error "clang-format failed with exit code %s; see *clang-format*"
+                    exit-code))
+      (revert-buffer :ignore-auto :noconfirm :preserve-modes))))
+#+END_SRC
+
+The binding is visual-state only. It works for both classic =cc-mode= buffers
+and =c-ts-mode= buffers.
+
+#+BEGIN_SRC emacs-lisp
+(after! cc-mode
+  (map! :map (c-mode-map c++-mode-map)
+        :v "g =" #'cloudlet/clang-format-region-lines))
+
+(after! c-ts-mode
+  (map! :map (c-ts-mode-map c++-ts-mode-map)
+        :v "g =" #'cloudlet/clang-format-region-lines))
+#+END_SRC
+
+* Conclusion
+
+These changes remove a few small but repeated context switches from my MLIR/LLVM
+editing loop: opening model artifacts, editing TableGen/MLIR files, avoiding
+visual alignment in C++, and formatting only the lines I touched.
+
+If you have suggestions for compiler development workflows or interesting config
+files, send them to =pan.yiping.fi@gmail.com=.
