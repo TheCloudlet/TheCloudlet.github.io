@@ -2,11 +2,11 @@
 #+DESCRIPTION: Doom Emacs configuration notes for ONNX artifacts, MLIR/TableGen modes, C++ tree-sitter indentation, and selected-line clang-format.
 #+AUTHOR: Yi-Ping Pan (Cloudlet)
 #+DATE: 2026-07-31
-#+ZOLA_DRAFT: true
+#+ZOLA_DRAFT: false
 
 #+ZOLA_SECTION: technical/emacs
 #+ZOLA_CATEGORIES: emacs compiler
-#+ZOLA_TAGS: emasc llvm mlir tablegen tree-sitter clang-format onnx netron
+#+ZOLA_TAGS: emacs llvm mlir tablegen tree-sitter clang-format onnx netron
 
 #+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (toc . t))
 
@@ -370,9 +370,6 @@ and =c-ts-mode= buffers.
 
 * Conclusion
 
-These changes remove a few small but repeated context switches from my MLIR/LLVM
-editing loop: opening model artifacts, editing TableGen/MLIR files, avoiding
-visual alignment in C++, and formatting only the lines I touched.
-
-If you have suggestions for compiler development workflows or interesting config
-files, send them to =pan.yiping.fi@gmail.com=.
+These changes remove a few repeated context switches from my MLIR/LLVM editing
+loop. If you have suggestions for compiler development workflows or interesting
+config files, send them to =pan.yiping.fi@gmail.com=.

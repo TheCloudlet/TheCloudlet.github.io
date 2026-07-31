@@ -3,9 +3,9 @@ title = "Emacs Setup for LLVM and MLIR Compiler Work"
 author = ["Yi-Ping Pan (Cloudlet)"]
 description = "Doom Emacs configuration notes for ONNX artifacts, MLIR/TableGen modes, C++ tree-sitter indentation, and selected-line clang-format."
 date = 2026-07-31
-draft = true
+draft = false
 [taxonomies]
-  tags = ["emasc", "llvm", "mlir", "tablegen", "tree-sitter", "clang-format", "onnx", "netron"]
+  tags = ["emacs", "llvm", "mlir", "tablegen", "tree-sitter", "clang-format", "onnx", "netron"]
   categories = ["emacs", "compiler"]
 [extra]
   math = true
@@ -377,9 +377,6 @@ and `c-ts-mode` buffers.
 
 ## Conclusion {#conclusion}
 
-These changes remove a few small but repeated context switches from my MLIR/LLVM
-editing loop: opening model artifacts, editing TableGen/MLIR files, avoiding
-visual alignment in C++, and formatting only the lines I touched.
-
-If you have suggestions for compiler development workflows or interesting config
-files, send them to `pan.yiping.fi@gmail.com`.
+These changes remove a few repeated context switches from my MLIR/LLVM editing
+loop. If you have suggestions for compiler development workflows or interesting
+config files, send them to `pan.yiping.fi@gmail.com`.
