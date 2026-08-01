@@ -125,7 +125,7 @@ enum Lisp_Type
     Lisp_Int1 = 6,         // 0b110 <-- !
     Lisp_String = 4,       // 0b100
     Lisp_Vectorlike = 5,   // 0b101
-    Lisp_Cons = 3,         // 0b010 <-- !
+    Lisp_Cons = 3,         // 0b011 <-- !
     Lisp_Float = 7         // 0b111
   };
 #+END_SRC
