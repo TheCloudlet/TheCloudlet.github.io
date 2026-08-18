@@ -1,0 +1,132 @@
+#+TITLE: Trip to Perth
+#+DESCRIPTION: Notes from a trip to Western Australia — food, people, boundaries, and quality.
+#+AUTHOR: Yi-Ping Pan (Cloudlet)
+#+DATE: 2026-08-18
+#+ZOLA_DRAFT: false
+#+ZOLA_CATEGORIES: murmur
+#+ZOLA_TAGS: traveling thinking australia perth
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t))
+#+ZOLA_SECTION: murmur
+
+* Opening
+
+I am at Perth International Airport, writing this before the flight home.
+
+My wife booked a cheap trip to Perth for January. I looked forward to it.
+Shortly afterwards I lost my job. The first half of 2026 went to searching for
+work and keeping our finances stable, while the trip still added cost.
+I eventually landed a job I like and could just about afford the trip.
+
+I am glad we came. The pace and atmosphere here are calmer than what I am used
+to.
+
+@@md:{{ image(sources=["/images/2026-08-18-perth-airport-qantas.webp"] alt="Qantas at Perth Airport" caption="Qantas at Perth Airport") }}@@
+
+* Food
+
+Supermarkets showed the first clear difference. At Coles and Woolworths, meat,
+fruit and vegetables carry an expectation of high quality and relatively natural
+presentation. Restaurants followed the same pattern: good ingredients, little
+dressing, often finished with lemon to sharpen the flavour.
+
+This made me look again at Taiwanese food. Historically we tended to be frugal.
+We used almost every part of the pig or chicken. Some cuts had less pleasant
+tastes and sold for lower prices, so people developed cooking methods and sauces
+to make them acceptable. Over time those techniques became the default. Extra
+flavour was added on top of the ingredient rather than drawn from it.
+
+In Australia the base flavour is often already good. I ate well for the first
+few days. Then I bought too much Tasmanian salmon, Angus beef and lamb chops. I
+gained about 2.5 kg. I will need to correct that after returning to Taiwan.
+
+In Taiwan a meal often comes with soup or a drink, which quietly adds sugar.
+Here, locals treat tap water as the default on the table.
+
+Portions are large. A chicken parma, a personal pizza, or fish and chips is
+clearly sized as one full meal.
+
+@@md:{{ image(sources=["/images/2026-08-18-home-cooked-meal.webp"] alt="Salmon, mussels, prawns and berries" caption="Salmon, mussels, prawns and berries") }}@@
+
+* Places
+
+At the Perth Observatory one night, the guides explained why accurate
+timekeeping was once essential for navigation at sea and for determining
+longitude. They gave clear introductions and showed us the southern sky through
+four large telescopes.
+
+On Rottnest Island the quokkas were very tame. The weather was unstable, with
+showers coming and going. During a heavy shower we stepped into the bushes for
+shelter. When we turned around, two quokkas stood there watching us. That small
+encounter stayed with me.
+
+The coastline around Nambung National Park and further south along the
+Leeuwin-Naturaliste region was varied. The waves were powerful and genuinely
+dangerous in places. I visited more than ten beaches, each with its own
+character. We also saw six humpback whales travelling south, heading back toward
+Antarctica.
+
+@@md:{{ image(sources=["/images/2026-08-18-coastal-road.webp"] alt="Coastal road along the Leeuwin-Naturaliste region" caption="Coastal road along the Leeuwin-Naturaliste region") }}@@
+
+@@md:{{ image(sources=["/images/2026-08-18-powerful-wave.webp"] alt="Strong waves on the south-west coast" caption="Strong waves on the south-west coast") }}@@
+
+@@md:{{ image(sources=["/images/2026-08-18-humpback-whales.webp"] alt="Humpback whales" caption="Humpback whales") }}@@
+
+@@md:{{ image(sources=["/images/2026-08-18-whale-fluke.webp"] alt="Whale fluke" caption="Whale fluke") }}@@
+
+@@md:{{ image(sources=["/images/2026-08-18-cape-leeuwin.webp"] alt="Cape Leeuwin" caption="Cape Leeuwin") }}@@
+
+* People
+
+When I stayed relaxed and open, people responded without much friction.
+
+In Mandurah, while we were looking at the lake, a couple told us about a spot
+where dolphins move up and down the Dawesville Channel. We went there and it was
+worthwhile. Similar small exchanges happened while ordering food or joining
+tours. Starting a conversation seemed to cost less. If I needed space, a short
+reply and a smile was enough to close it.
+
+@@md:{{ image(sources=["/images/2026-08-18-mandurah-lake.webp"] alt="Calm water at Mandurah" caption="Calm water at Mandurah") }}@@
+
+At Cape Leeuwin Lighthouse a guide used the phrase “spit the dummy.” He
+described people who express anger by slamming things, rolling eyes, sulking or
+passive resistance as behaving like infants. The point was practical: when
+someone has the ability to speak clearly but chooses emotional display instead,
+the emotion stays stronger. Putting the feeling into words tends to reduce its
+intensity.
+
+* Family
+
+I usually travel alone or with my wife. Decisions stay simple. This time I
+brought my younger sister. The age gap between us is more than seven years.
+Several patterns during the trip created friction.
+
+She went through my shopping basket without asking. At meals she watched other
+people’s plates and showed clear interest in the food without a direct request.
+The unspoken pressure felt higher than a simple question would have been. At
+times she also withdrew without saying what was wrong.
+
+In the past I mostly ignored these moments because contact was limited. This
+trip made the contact constant. I had to look at what I was actually feeling
+and what I cared about. After dealing with those reactions, I decided to
+address the behaviour directly — to say what was acceptable and what was not —
+instead of ignoring it or cutting her off. It was a small shift from avoidance
+toward teaching basic boundaries.
+
+Asking is respect. Even if the answer is no, the request itself returns the
+decision to the other person. Watching or using body language without words
+moves the emotional cost onto them and creates pressure.
+
+I also looked at some of my own earlier communication habits from an angle I
+had not taken before.
+
+I think this shift was helped by the calmer pace here. The long drives and
+open views also made space for it. I got the family here and back safely.
+
+@@md:{{ image(sources=["/images/2026-08-18-rental-living-room.webp"] alt="The rental living room" caption="The rental living room") }}@@
+
+* Closing
+
+Back in Taiwan the difference in everyday finish is obvious. Many small details
+here are treated with more care than the common local habit of stopping at “good
+enough to work.” I keep thinking about which parts of that higher baseline can
+be brought back and made workable.
