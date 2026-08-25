@@ -1,0 +1,291 @@
++++
+title = "Catching NaN at the MLIR Pass Boundary"
+author = ["Yi-Ping Pan (Cloudlet)"]
+description = "How operation verifiers catch invalid floating-point attributes at compiler pass boundaries before they reach the runtime."
+date = 2026-08-25
+draft = false
+[taxonomies]
+  tags = ["mlir", "compiler", "hardware"]
+  categories = ["compiler"]
+[extra]
+  toc = true
+  owner = "Yi-Ping Pan (Cloudlet)"
++++
+
+## TL;DR {#tl-dr}
+
+A Multi-Level Intermediate Representation (MLIR) pass can create a not-a-number
+(NaN) attribute during constant folding. This can happen even when every operand
+starts as a valid value.
+
+The compiler should reject that value at the earliest intermediate
+representation (IR) boundary. Otherwise, the runtime exposes it later as a
+distant accuracy regression.
+
+The shortest reliable workflow traces the first bad pass and fixes its
+arithmetic. A local operation verifier then turns the operation's numeric
+contract into a check after every pass.
+
+
+## The compiler creates the bad value {#the-compiler-creates-the-bad-value}
+
+I write fusion passes that reduce work in a neural processing unit (NPU)
+runtime. A later regression reports a lower accuracy metric on a held-out
+evaluation set, but the report does not identify the fusion pass.
+
+I trace the bad values backward through the model and runtime. A fused
+operation's output attribute already contains a quiet NaN before the runtime
+touches it.
+
+The fusion pass folds `0 * Inf` into that attribute. The runtime consumes the
+attribute and propagates the NaN through the remaining computation.
+
+The operation still type-checks, and its operands and results still align. The
+compiler therefore produces structurally valid but numerically meaningless IR.
+
+
+## Valid operands can produce NaN {#valid-operands-can-produce-nan}
+
+LLVM represents compile-time floating-point values with [`APFloat`](https://llvm.org/doxygen/classllvm_1_1APFloat.html). This type
+supports multiple floating-point formats and explicit rounding modes, so
+compiler code does not need to depend on the host machine's native
+floating-point behavior.
+
+The Institute of Electrical and Electronics Engineers (IEEE) 754 standard
+defines `0 * Inf` as NaN. Each operand can carry a valid meaning on its own, but
+their product has no numeric result.
+
+Other arithmetic paths can create the same class of value:
+
+-   `Inf - Inf` produces NaN because the difference has no defined value.
+-   `Inf / Inf` and `0 / 0` produce NaN because neither ratio has a defined value.
+-   A square root or logarithm of a negative real value produces NaN.
+-   A conversion from a wider format to a narrower format can overflow to
+    infinity, which later arithmetic can turn into NaN.
+
+Common arithmetic operations propagate an existing NaN. One bad fold can
+therefore spread through many downstream operations before the runtime reports a
+visible failure.
+
+NaN also compares unequal to itself. Every ordered comparison against NaN
+returns false, so a range check such as `x < min || x > max` accepts NaN as
+though it falls inside the range.
+
+A direct finiteness check catches both NaN and infinity. A range check cannot
+replace that contract.
+
+
+## Hardware X propagation provides the right model {#hardware-x-propagation-provides-the-right-model}
+
+A hardware description language (HDL) simulator uses `X` to represent an unknown
+logic state. An uninitialized register or timing violation can introduce one
+`X`, and downstream logic can propagate it far from its source.
+
+A NaN follows the same debugging shape. The final observation provides
+propagation evidence, while the first transition from a valid value to NaN
+identifies the defect.
+
+The analogy stops at propagation. `X` represents simulator uncertainty rather
+than a physical third logic value, while IEEE 754 defines NaN as a
+floating-point value with specified comparison and arithmetic behavior.
+
+This distinction does not change the debugging rule. Trace backward to the first
+source.
+
+[Synopsys describes](https://www.synopsys.com/blogs/chip-design/debugging-x-can-be-difficult.html) the same process for register-transfer-level (RTL) and
+gate-level X propagation. An engineer follows drivers and fan-in signals until
+the earliest `X` occurs.
+
+
+## Verify the earliest representation boundary {#verify-the-earliest-representation-boundary}
+
+The quiet NaN sits in an operation attribute before the graph reaches the
+runtime. The compiler can inspect the value at the exact boundary where the
+fusion pass creates it.
+
+A runtime numeric check observes the symptom after the value crosses the
+compiler/runtime boundary. It cannot identify which compiler pass first writes
+the attribute.
+
+The [MLIR developer guide](https://mlir.llvm.org/getting_started/DeveloperGuide/#ir-verifier) defines a contract for every pass. Each pass can assume
+valid input IR, and each pass must return valid output IR.
+
+The pass manager enforces this contract between passes by default. Callers can
+disable per-pass verification, but the valid-input, valid-output convention
+still defines correct pass behavior.
+
+Pass-boundary verification checks a pass's final output. A rewrite can use a
+transient invalid state internally, but it must restore all invariants before it
+returns.
+
+MLIR also tells operation verifiers to inspect local properties. A verifier can
+check the value of the operation's own attribute without following producers or
+consumers.
+
+This local rule preserves transformation freedom. It also limits rejection to an
+invariant that the operation itself defines.
+
+
+## Compare the last good and first bad IR {#compare-the-last-good-and-first-bad-ir}
+
+An MLIR pass pipeline runs in a fixed order. The first pass whose output
+contains NaN marks the source boundary.
+
+During initial triage, `-mlir-print-ir-after-all` prints IR after every pass.
+Once the output reveals the suspect pass, targeted flags show the two states
+that matter:
+
+```text
+-mlir-print-ir-before=<pass>
+-mlir-print-ir-after=<pass>
+```
+
+The `-mlir-print-ir-after-change` flag suppresses output for passes that leave
+the IR unchanged. This option reduces noise in pipelines where many passes do
+not affect a given input.
+
+The private operation, attribute, and pass names stay private. The following
+fictional quantization-rescale operation preserves the relevant structure:
+
+```text
+// Last-good IR before the fusion pass.
+%0 = "quant.rescale_fuse"(%input) {scale = 2.500000e-01 : f32}
+     : (tensor<1x64x56x56xf32>) -> tensor<1x64x56x56xf32>
+
+// First-bad IR after the fusion pass folds 0 * inf.
+%0 = "quant.rescale_fuse"(%input) {scale = 0x7FC00000 : f32}
+     : (tensor<1x64x56x56xf32>) -> tensor<1x64x56x56xf32>
+```
+
+The operand, result type, and shape remain identical. Only the `scale` attribute
+changes from a finite quarter-scale factor to the bit pattern for a quiet NaN.
+
+A type checker or shape-inference pass accepts both forms. The operation needs a
+numeric invariant to reject the second form.
+
+
+## Put an intrinsic invariant on the operation {#put-an-intrinsic-invariant-on-the-operation}
+
+Fixing the `0 * Inf` fold removes the current source. It does not stop another
+pass, importer, or rewrite pattern from assigning NaN to the same attribute.
+
+An operation verifier states the lasting contract. For the fictional
+`quant.rescale_fuse` operation, `scale` represents a multiplicative quantization
+factor in the finite positive reals.
+
+That meaning makes finiteness and positivity intrinsic to the operation. Every
+producer must honor the same constraints.
+
+If an operation permits NaN in general but one fusion pass must not produce it,
+the pass owns the check instead. An operation verifier must not reject values
+that the operation's semantics allow.
+
+The Operation Definition Specification (ODS) enables a custom verifier with one
+declaration:
+
+```td
+def RescaleFuseOp : Quant_Op<"rescale_fuse", []> {
+  let arguments = (ins AnyTensor:$input, F32Attr:$scale);
+  let results = (outs AnyTensor:$output);
+  let hasVerifier = 1;
+}
+```
+
+The C++ implementation checks the complete attribute contract:
+
+```cpp
+LogicalResult RescaleFuseOp::verify() {
+  const llvm::APFloat &scale = getScaleAttr().getValue();
+  if (!scale.isFinite() || scale.isNegative() || scale.isZero())
+    return emitOpError() << "scale attribute must be a finite, positive value";
+  return success();
+}
+```
+
+`APFloat::isNaN()` rejects quiet and signaling NaN encodings, but it accepts
+positive and negative infinity. `APFloat::isFinite()` rejects NaN and both
+infinities.
+
+The operation's semantics determine which query fits. A quantization scale
+cannot use infinity, so this verifier checks finiteness and positivity.
+
+The [ODS documentation](https://mlir.llvm.org/docs/DefiningDialects/Operations/#custom-verifier-code) defines the verification order. Structural traits run
+first, generated invariant checks validate attributes and types next, and the
+custom verifier runs after those checks.
+
+This order lets `verify()` call `getScaleAttr().getValue()` directly. The
+generated checks already establish the attribute's presence and type.
+
+
+## Lock the contract with one diagnostic test {#lock-the-contract-with-one-diagnostic-test}
+
+The [MLIR testing guide](https://mlir.llvm.org/getting_started/TestingGuide/#diagnostic-tests) documents `-verify-diagnostics` tests for operation
+invariants. One negative case proves that the verifier rejects NaN and preserves
+the diagnostic:
+
+```mlir
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics
+
+func.func @rescale_rejects_nan(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+  // expected-error@+1 {{scale attribute must be a finite, positive value}}
+  %0 = "quant.rescale_fuse"(%arg0) {scale = 0x7FC00000 : f32}
+       : (tensor<4xf32>) -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+```
+
+The surrounding operation tests should retain at least one valid scale case.
+Together, the cases preserve both acceptance and rejection behavior.
+
+
+## Reduce the valid input that triggers the pass {#reduce-the-valid-input-that-triggers-the-pass}
+
+The last-good/first-bad comparison locates the offending pass. It does not
+remove unrelated structure from the reproducer.
+
+[`mlir-reduce`](https://mlir.llvm.org/docs/Tools/mlir-reduce/) minimizes a valid input while preserving a user-defined
+interestingness test. It validates each candidate before applying a reduction.
+
+The tool keeps a reduction only while the test reproduces the failure.
+
+For this incident, the candidate must contain valid IR from before the fusion
+pass. The interestingness test runs the suspect pipeline and succeeds only when
+the verifier reports `scale attribute must be a finite, positive value`.
+
+Do not feed `mlir-reduce` the already-invalid, post-fusion operation. That input
+fails verification before the tool can reduce it.
+
+Feed the tool valid, pre-fusion IR instead. It can then reduce the conditions
+that cause the pass to create the invalid attribute.
+
+The concrete command depends on the private dialect and pipeline:
+
+```bash
+# Run mlir-reduce with test script
+mlir-reduce first-good-input.mlir \
+  -reduction-tree="traversal-mode=0 test=check_for_nan_diagnostic.sh"
+```
+
+
+## Follow the failure from source to contract {#follow-the-failure-from-source-to-contract}
+
+1.  Reproduce the failure with pass-manager verification enabled.
+
+2.  Locate the first bad pass with `-mlir-print-ir-after-all`.
+
+3.  Capture that pass's before-and-after IR with the targeted print flags.
+
+4.  Fix the arithmetic that creates the invalid value.
+
+5.  Add a local operation verifier when the invariant belongs to the operation.
+
+6.  Add one negative diagnostic regression test.
+
+7.  Reduce the valid pre-pass input with the same failure predicate.
+
+Runtime numeric checks remain useful when invalid values exist only in execution
+data. Input-dependent instability may never appear in a compile-time attribute.
+
+This incident has a different boundary. The compiler already holds the invalid
+value, so the operation verifier stops compilation next to the broken contract
+instead of letting the runtime report a distant accuracy regression.
