@@ -31,21 +31,35 @@ fail=0
 lint_fail=0
 INCLUDE_DRAFTS=""
 FORCE=""
+MODE="all"
+SHOW_HELP=""
 
 # parse flags
 for arg in "$@"; do
     case "$arg" in
-        -h|--help) usage; exit 0 ;;
+        -h|--help) SHOW_HELP=1 ;;
         --drafts)  INCLUDE_DRAFTS=1 ;;
         --force)   FORCE=1 ;;
-        --lint|--export|--check) ;;   # valid modes, handled in dispatch below
-        -*)
-            printf "\033[1;31mbuild-org.sh: invalid option '%s'\033[0m\n\n" "$arg" >&2
+        --lint|--export|--check)
+            if [ "$MODE" != "all" ]; then
+                printf "\033[1;31mbuild-org.sh: multiple modes are not allowed\033[0m\n\n" >&2
+                usage >&2
+                exit 2
+            fi
+            MODE="$arg"
+            ;;
+        *)
+            printf "\033[1;31mbuild-org.sh: invalid argument '%s'\033[0m\n\n" "$arg" >&2
             usage >&2
             exit 2
             ;;
     esac
 done
+
+if [ -n "$SHOW_HELP" ]; then
+    usage
+    exit 0
+fi
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -53,7 +67,6 @@ log()  { printf "\n\033[1;34m==>\033[0m %s\n\n" "$*"; }
 ok()   { printf "  \033[1;32m[OK]\033[0m  %s\n" "$*"; }
 err()      { printf "  \033[1;31m[ERR]\033[0m %s\n" "$*"; fail=$((fail + 1)); }
 lint_err() { printf "  \033[1;31m[ERR]\033[0m %s\n" "$*"; fail=$((fail + 1)); lint_fail=$((lint_fail + 1)); }
-warn() { printf "\033[1;33mWRN\033[0m  %s\n" "$*"; }
 
 # ─── Step 0: Lint .org files ──────────────────────────────────────────────────
 
@@ -62,8 +75,10 @@ lint_org() {
 
     for org in $(find "$CONTENT_DIR" -name "*.org" | sort); do
 
-        # skip draft files entirely
-        grep -q "^#+ZOLA_DRAFT: true" "$org" 2>/dev/null && continue
+        # skip draft files unless explicitly requested
+        if [ -z "$INCLUDE_DRAFTS" ] && grep -q "^#+ZOLA_DRAFT: true" "$org" 2>/dev/null; then
+            continue
+        fi
 
         # Bare image links (no alt text → ox-zola emits Hugo figure shortcode)
         bare=$(grep -n "^\[\[/images/[^]]*\]\]$" "$org" 2>/dev/null || true)
@@ -101,9 +116,6 @@ fi
                 lint_err "$org — ZOLA_SECTION mismatch (got: '$actual_section', expected: '$expected_section')"
             fi
         fi
-
-# Skip draft content checks if it's a draft, but keep structural checks above
-grep -q "^#+ZOLA_DRAFT: true" "$org" 2>/dev/null && continue
 
 # Check for legacy TAXONOMIES keywords
 if grep -q "ZOLA_TAXONOMIES_" "$org"; then
@@ -145,9 +157,16 @@ fi
 export_org() {
     log "Step 2: Exporting .org → .md"
 
-    ORG_EXPORT_DRAFTS="$INCLUDE_DRAFTS" ORG_EXPORT_FORCE="$FORCE" \
+    export_output=$(ORG_EXPORT_DRAFTS="$INCLUDE_DRAFTS" ORG_EXPORT_FORCE="$FORCE" \
         "$EMACS" --batch --load scripts/org-export.el \
-        2>&1 | grep -v "^Loading\|^Wrote\|^org-babel\|\[ox-hugo\]\|\[ox-zola\]"
+        2>&1)
+    export_status=$?
+    printf '%s\n' "$export_output" | \
+        grep -v "^Loading\|^Wrote\|^org-babel\|\[ox-hugo\]\|\[ox-zola\]" || true
+
+    if [ "$export_status" -ne 0 ]; then
+        err "Emacs export failed (exit $export_status)"
+    fi
 }
 
 # ─── Step 2: Validate generated .md files ────────────────────────────────────
@@ -157,13 +176,15 @@ check_md() {
 
     # --- Integrity Check: No orphaned markdown or 'posts' directory ---
     for md in $(find "$CONTENT_DIR" -name "*.md" | sort); do
-        [[ "$md" == *"_index.md" ]] && continue
+        [ "${md##*/}" = "_index.md" ] && continue
 
         # Explicitly forbid 'posts' directory
-        if [[ "$md" == *"/posts/"* ]]; then
-            err "$md — forbidden directory 'posts'. All content must be categorized."
-            continue
-        fi
+        case "$md" in
+            */posts/*)
+                err "$md — forbidden directory 'posts'. All content must be categorized."
+                continue
+                ;;
+        esac
 
         org="${md%.md}.org"
         if [ ! -f "$org" ]; then
@@ -172,7 +193,9 @@ check_md() {
     done
 
     for org in $(find "$CONTENT_DIR" -name "*.org" | sort); do
-        grep -q "^#+ZOLA_DRAFT: true" "$org" 2>/dev/null && continue
+        if [ -z "$INCLUDE_DRAFTS" ] && grep -q "^#+ZOLA_DRAFT: true" "$org" 2>/dev/null; then
+            continue
+        fi
 
         md="${org%.org}.md"
 
@@ -182,14 +205,9 @@ check_md() {
             continue
         fi
 
-        # md should be newer than org. If it is older, either we deliberately
-        # kept the old .md (incremental, no --force) or the export failed.
+        # md must be at least as new as its org source
         if [ "$org" -nt "$md" ]; then
-            if [ -n "$FORCE" ]; then
-                err "$md — stale (.org is newer after --force, export may have failed)"
-            else
-                warn "$md — .org is newer; kept old .md (run with --force to re-export)"
-            fi
+            err "$md — stale (.org is newer; export required)"
         else
             ok "$md"
         fi
@@ -212,15 +230,6 @@ check_md() {
 }
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
-
-# Pick the mode from the arguments (options like --drafts are ignored here;
-# unknown options were already rejected during flag parsing above).
-MODE="all"
-for arg in "$@"; do
-    case "$arg" in
-        --lint|--export|--check) MODE="$arg" ;;
-    esac
-done
 
 case "$MODE" in
     --lint)   lint_org ;;

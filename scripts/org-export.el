@@ -61,7 +61,8 @@ Ensures that maps (tables) are at the end of the alist."
 ;; for a variable exported as empty, and "" is truthy in Elisp, so compare
 ;; explicitly against a non-empty value.
 (let ((include-drafts (let ((v (getenv "ORG_EXPORT_DRAFTS"))) (and v (not (string= v "")))))
-      (force          (let ((v (getenv "ORG_EXPORT_FORCE")))  (and v (not (string= v ""))))))
+      (force          (let ((v (getenv "ORG_EXPORT_FORCE")))  (and v (not (string= v "")))))
+      (export-failed nil))
   (dolist (org (directory-files-recursively "content" "\\.org$"))
     (let ((org-abs (expand-file-name org)))
      (with-current-buffer (find-file-noselect org-abs)
@@ -85,4 +86,7 @@ Ensures that maps (tables) are at the end of the alist."
                 (ox-zola-export-to-md)
                 (message "  \033[1;32m[OK]\033[0m  %s%s" org (if is-draft " (draft)" "")))
             (error
-             (message "  \033[1;31m[ERR]\033[0m %s\n       %s" org e))))))))))
+             (setq export-failed t)
+             (message "  \033[1;31m[ERR]\033[0m %s\n       %s" org e)))))))))
+  (when export-failed
+    (kill-emacs 1)))
