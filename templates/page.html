@@ -40,13 +40,24 @@ config.extra.comments.remark42 %}
   })(remark_config.components || ["embed"], document);
 </script>
 {%- endif %} {%- endblock comments_init %} {%- block content %}
+{%- set toc = page.toc %}
+{%- set toc_label = macros::translate(key="On_this_page", default="On this page", i18n=i18n) %}
 <article>
   {%- block page_header %} {{- macros::title_post(page=page, config=config) }}
   {%- if not page.extra.hide_meta %} {%- if config.extra.meta_post.position %}
   {%- if config.extra.meta_post.position == "top" or
   config.extra.meta_post.position == "both" %} {{- macros::meta_post(page=page,
   config=config) }} {%- endif %}{%- endif %} {%- endif %} {%- endblock
-  page_header %} {# In Page Series Navigation #} {%- if config.extra.series |
+  page_header %}
+  {%- if config.extra.toc | default(value=true) and toc %}
+  <details class="mobile-toc">
+    <summary>{{ toc_label }}</summary>
+    <nav aria-label="{{ toc_label }}">
+      {%- include "partials/toc-links.html" %}
+    </nav>
+  </details>
+  {%- endif %}
+  {# In Page Series Navigation #} {%- if config.extra.series |
   default(value=true) %} {%- if page.extra.series %} {%- set tag =
   get_taxonomy_term(kind="tags", term=page.extra.series, lang=lang) %} {%- set
   page_num = tag.page_count | as_str %} {%- if lang != config.default_language
@@ -195,8 +206,8 @@ config.extra.comments.remark42 %}
 </article>
 
 {%- block toc %} {%- if config.extra.toc | default(value=true) %} {# FORCE TOC:
-Always set toc variable if global config is on #} {%- set toc = page.toc %} {%-
-if toc or page.extra.series %}
+Always set toc variable if global config is on #} {%- if toc or
+page.extra.series %}
 
 <div class="sblock">
   {%- if page.extra.series %} {%- set num_extra_pages =
@@ -274,18 +285,10 @@ if toc or page.extra.series %}
   </div>
   {%- endif %} {%- if toc %}
   <div class="blockdiv sticky">
-    <a class="b s150" href="#"
-      >{{ macros::translate(key="Index", default="Index", i18n=i18n) }}</a
-    >
-    {%- for h in toc %}
-    <div>
-      <a href="#{{h.id | safe}}">{{ h.title }}</a>
-    </div>
-    {%- if h.children %} {%- for h2 in h.children %}
-    <div class="hpad">
-      <a href="#{{h2.id | safe}}"><small>- {{ h2.title }}</small></a>
-    </div>
-    {%- endfor %} {%- endif %} {%- endfor %}
+    <span class="b s90">{{ toc_label }}</span>
+    <nav aria-label="{{ toc_label }}">
+      {%- include "partials/toc-links.html" %}
+    </nav>
   </div>
 </div>
 {%- endif %} {%- endif %} {%- endif %} {%- endblock toc %} {%- endblock content

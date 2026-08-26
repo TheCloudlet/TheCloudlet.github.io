@@ -11,6 +11,10 @@
 :root {
   // -- Fonts --
   --code-font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --reading-column-width: 80ch;
+  --toc-rail-width: 15rem;
+  --layout-gap: 2rem;
+  --page-shell-width: calc(var(--reading-column-width) + var(--toc-rail-width) + var(--layout-gap));
 
   // -- GitHub Dark Syntax Highlighting --
   // We use !important or high specificity to override Abridge's mode-based settings
@@ -69,6 +73,11 @@ h6 {
   font-family: system-ui, -apple-system, sans-serif;
 }
 
+article h1,
+article h2 {
+  text-wrap: balance;
+}
+
 article {
   h1 {
     font-size: 1.8rem; // Reduced from 2rem
@@ -123,22 +132,124 @@ article {
 // 4. Layout & TOC Refinements
 // =============================================================================
 
-// Increase Global Max Width for Main Content
+// Keep site chrome and content on one shared frame.
 header,
 main,
 footer {
-  max-width: 90% !important; // Increased from 70% to give more room
+  max-width: var(--page-shell-width) !important;
 }
 
-// Sidebar (TOC) Adjustments - Force Visibility
+main > article {
+  flex: 0 1 var(--reading-column-width);
+  max-width: var(--reading-column-width);
+}
+
+main > :only-child {
+  max-width: var(--reading-column-width);
+  margin-inline: auto;
+}
+
+main > article > h1:first-child,
+.sblock > .blockdiv:first-child {
+  margin-top: 0;
+}
+
+// Desktop table of contents.
 .sblock {
   display: block !important;
-  width: 15rem !important;
-  min-width: 15rem !important;
-  margin-left: 2rem !important;
+  flex: 0 0 var(--toc-rail-width) !important;
+  width: var(--toc-rail-width) !important;
+  min-width: var(--toc-rail-width) !important;
+  max-width: var(--toc-rail-width) !important;
+  margin-left: var(--layout-gap) !important;
 
   @media screen and (max-width: 1100px) {
-    display: none !important; // Hide on small screens to prevent breaking
+    display: none !important;
+  }
+}
+
+.mobile-toc {
+  display: none;
+}
+
+.toc-level-1,
+.toc-level-2 {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+.toc-level-1 {
+  margin-top: 0.5rem;
+}
+
+.toc-level-2 {
+  padding-left: 1rem;
+}
+
+.toc-level-1 li {
+  margin-bottom: 0.35rem;
+}
+
+.toc-level-1 a {
+  font-weight: 400;
+}
+
+@media screen and (max-width: 1100px) {
+  header,
+  main,
+  footer {
+    max-width: calc(100% - 2rem) !important;
+  }
+
+  .mobile-toc {
+    display: block;
+    margin-bottom: 2rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--c3);
+    border-radius: 4px;
+    background-color: var(--c2);
+
+    summary {
+      cursor: pointer;
+      font-weight: 650;
+    }
+
+    &[open] summary {
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--c3);
+    }
+
+    nav {
+      margin-top: 0;
+    }
+
+    .toc-level-1 > li {
+      margin-bottom: 0.75rem;
+    }
+
+    .toc-level-1 > li:last-child {
+      margin-bottom: 0;
+    }
+
+    .toc-level-1 > li > a {
+      font-weight: 600;
+    }
+
+    .toc-level-2 {
+      margin-top: 0.35rem;
+      padding-left: 1rem;
+      border-left: 1px solid var(--c3);
+    }
+
+    .toc-level-2 li {
+      margin-bottom: 0.3rem;
+    }
+
+    a {
+      line-height: 1.4;
+    }
   }
 }
 
@@ -318,7 +429,7 @@ article > span {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 0.5;
+  opacity: 0.7;
   margin: 1.5rem 0 0.5rem -7rem;
   padding-left: 0;
 }
@@ -335,7 +446,7 @@ article > span {
   position: absolute;
   left: -6.5rem;
   font-size: 0.8rem;
-  opacity: 0.5;
+  opacity: 0.7;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -358,6 +469,39 @@ article > span {
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .timeline {
+    padding-left: 1.25rem;
+
+    &::before {
+      left: 0;
+    }
+  }
+
+  .timeline-year {
+    margin-left: -1.25rem;
+  }
+
+  .timeline-item {
+    display: block;
+    margin-bottom: 0.9rem;
+  }
+
+  .timeline-date {
+    position: static;
+    display: block;
+    margin-bottom: 0.15rem;
+  }
+
+  .timeline-dot {
+    left: -1.5rem;
+  }
+
+  .timeline-title {
+    display: block;
   }
 }
 
@@ -392,4 +536,3 @@ article > span {
   // tighten the scrollbar's visual weight on the equation block
   scrollbar-width: thin;
 }
-

@@ -1,0 +1,14 @@
+<ol class="toc-level-1">
+  {% for h in toc %}
+  <li>
+    <a href="#{{ h.id | safe }}">{{ h.title }}</a>
+    {% if h.children %}
+    <ol class="toc-level-2">
+      {% for h2 in h.children %}
+      <li><a href="#{{ h2.id | safe }}">{{ h2.title }}</a></li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ol>

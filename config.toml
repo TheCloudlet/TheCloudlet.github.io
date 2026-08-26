@@ -41,6 +41,7 @@ ogimage = "favicon.svg"
 banner = "favicon.svg"
 webmanifest = "manifest.json"
 toc = true
+recent = false
 google_analytics = "G-7FD091QMK9"
 
 menu = [
