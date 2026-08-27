@@ -41,6 +41,7 @@ config.extra.comments.remark42 %}
 </script>
 {%- endif %} {%- endblock comments_init %} {%- block content %}
 {%- set toc = page.toc %}
+{%- set show_toc = toc | length >= 3 %}
 {%- set toc_label = macros::translate(key="On_this_page", default="On this page", i18n=i18n) %}
 <article>
   {%- block page_header %} {{- macros::title_post(page=page, config=config) }}
@@ -49,7 +50,7 @@ config.extra.comments.remark42 %}
   config.extra.meta_post.position == "both" %} {{- macros::meta_post(page=page,
   config=config) }} {%- endif %}{%- endif %} {%- endif %} {%- endblock
   page_header %}
-  {%- if config.extra.toc | default(value=true) and toc %}
+  {%- if config.extra.toc | default(value=true) and show_toc %}
   <details class="mobile-toc">
     <summary>{{ toc_label }}</summary>
     <nav aria-label="{{ toc_label }}">
@@ -90,7 +91,8 @@ config.extra.comments.remark42 %}
       {%- endif %} {%- endfor %}
     </div>
   </div>
-  {%- endif %} {%- endif %} {{ page.content | safe }}
+  {%- endif %} {%- endif %}
+  <div class="article-body">{{ page.content | safe }}</div>
 
   <hr />
 
@@ -206,7 +208,7 @@ config.extra.comments.remark42 %}
 </article>
 
 {%- block toc %} {%- if config.extra.toc | default(value=true) %} {# FORCE TOC:
-Always set toc variable if global config is on #} {%- if toc or
+Always set toc variable if global config is on #} {%- if show_toc or
 page.extra.series %}
 
 <div class="sblock">
@@ -283,7 +285,7 @@ page.extra.series %}
     macros::series_link(inner=inner, page=page, config=config) }} {%- endfor %}
     {%- endif %}
   </div>
-  {%- endif %} {%- if toc %}
+  {%- endif %} {%- if show_toc %}
   <div class="blockdiv sticky">
     <span class="b s90">{{ toc_label }}</span>
     <nav aria-label="{{ toc_label }}">
