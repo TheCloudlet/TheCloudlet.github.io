@@ -2,7 +2,7 @@
 title = "Catching NaN at the MLIR Pass Boundary"
 author = ["Yi-Ping Pan (Cloudlet)"]
 description = "How operation verifiers catch invalid floating-point attributes at compiler pass boundaries before they reach the runtime."
-date = 2026-08-25
+date = 2026-08-26
 draft = false
 [taxonomies]
   tags = ["mlir", "compiler", "hardware"]
