@@ -1,0 +1,584 @@
++++
+title = "From Pixels to Tensors, Part 4: McCulloch–Pitts"
+author = ["Yi-Ping Pan (Cloudlet)"]
+description = "The 1943 McCulloch-Pitts paper contains no learning mechanism. Covers the five physical assumptions, the four threshold circuits, Theorems 1-3 on realizability, and what a fixed-structure net leaves unanswered."
+date = 2026-09-11
+draft = false
+[taxonomies]
+  tags = ["connectionism", "mcculloch-pitts", "threshold-logic", "neural-networks", "pixels-to-tensors"]
+  categories = ["machine-learning"]
+[extra]
+  math = true
+  toc = true
++++
+
+## Intro {#intro}
+
+[Part 3](@/technical/pixels-to-tensors/part-3-symbolic-ai.md) ended on an exit. Symbolic AI hit the limit of what a human can foresee
+and keep patched, and the way out was to stop authoring the behavior and fit
+parameters from data instead. This part goes back to the beginning of that
+second road.
+
+The starting points could not be further apart. Newell and Simon's Physical
+Symbol System Hypothesis says intelligence is the manipulation of symbols
+according to formal rules, with knowledge written down explicitly by someone who
+knows it. Connectionism says the opposite: intelligence is not encoded, it is
+**fitted**. Nobody writes the rule that a cat has pointed ears and slit pupils.
+You supply enough pictures of cats and an objective, and the system adjusts the
+connection strengths among a large number of very simple units until it
+approximates a function that can tell cats apart.
+
+A net with no loops and a temporal propositional expression turn out to be two
+notations for the same thing, and the paper converts each into the other. Almost
+any sentence about which neuron fired when can be built as such a net; the
+exceptions are the sentences that come out true when nothing fired. Learning is
+not in scope.
+The wiring is fixed before the net runs, by assumption, and the rest of this
+part is about what that assumption costs.
+
+
+### An hour of looking at water {#an-hour-of-looking-at-water}
+
+Earlier this year I went whale watching off Perth. It was my first time, and for
+the first stretch I was useless. People around me kept calling out where to
+look, and I could not see what they were seeing. The ocean was just a moving
+surface. I had no rule to apply, and nobody could give me one that helped —
+"look for the blow" assumes you already know what counts as a blow and what is
+just chop.
+
+After about an hour, something changed. I started catching the humpbacks'
+flukeprints: the smooth, oily-looking circles a tail leaves on the surface when
+the animal goes down, and the particular way the ripples spread. Once I could
+see those, I could look **ahead** of them and be watching the right patch of water
+when the whale came up to breathe.
+
+I still cannot write down the rule. I could not tell you the threshold on ripple
+diameter, or how I separate a flukeprint from a wind slick. Nothing was
+explicitly taught to me and nothing was explicitly encoded. An hour of examples
+reorganized something, and afterwards a perception was available to me that had
+not been there before.
+
+
+## Two men and a question {#two-men-and-a-question}
+
+In 1943 Warren McCulloch was a psychiatrist and neurophysiologist in his
+mid-forties who had been preoccupied with logic for two decades. Walter Pitts
+was a largely self-taught logician, barely twenty, who had turned up at the
+University of Chicago after reading _Principia Mathematica_ and writing to
+Bertrand Russell about errors he had found in it. They collaborated on a paper
+called "A Logical Calculus of the Ideas Immanent in Nervous Activity."[^fn:1]
+
+McCulloch spent his career circling a single question, which he later used as
+the title of a lecture:[^fn:2]
+
+> What is a number, that a man may know it, and a man, that he may know a number?
+
+The sentence has two halves. The first — **what is a number, that a man may know
+it** — asks what numbers and logical relations would have to be like for a
+physical object to represent and operate on them. The 1943 paper is a large part
+of the answer.
+
+The second — **a man, that he may know a number** — asks what a knower has to be
+for knowing to happen in it. The 1943 paper does not touch it.
+
+
+## What neurophysiology looked like in 1943 {#what-neurophysiology-looked-like-in-1943}
+
+The paper opens with two pages of physiology rather than mathematics. Every
+formal assumption that follows is introduced as a compression of something
+observed in a lab.
+
+The picture available at the time went roughly like this. The nervous system is
+a net of neurons, each with a cell body (soma) and an axon. Junctions — synapses
+— run from the axon of one neuron to the soma of another. Each neuron has a
+threshold, and excitation has to exceed it to start an impulse. Once started,
+the impulse is determined by the neuron rather than by the stimulus that
+triggered it, and it propagates through the whole neuron. Conduction velocity
+scales with axon diameter, and the thin-and-short versus thick-and-long
+trade-off roughly cancels, so axonal travel time contributes little to the
+**order** in which impulses arrive. No single synapse had ever been observed to
+fire a neuron on its own; firing required enough neighbouring synapses active
+together inside a latent addition period of well under a millisecond. After
+firing, the neuron is briefly refractory, then recovers.
+
+Inhibition is one group of neurons shutting down another. The older explanation
+routed it through interneurons whose thresholds got raised, but newer
+measurements showed some inhibition completing in under a millisecond — too fast
+for an extra cell in the path. So it had to be a synapse acting directly on the
+neuron being excited. Whether that action was absolute or merely raised the
+threshold, the experiments of the day could not say. The authors state the
+choice they make:
+
+> As yet experiment has not shown whether the refractoriness is relative or
+> absolute. We will assume the latter and demonstrate that the difference is
+> immaterial to our argument.
+
+The claim is not that the simplification is true. The claim is that any net
+built on one assumption has an equivalent built on the other, so conclusions
+invariant under that equivalence hold either way.
+
+
+## Five assumptions {#five-assumptions}
+
+The physical assumptions:[^fn:1]
+
+> (1) The activity of the neuron is an "all-or-none" process.
+>
+> (2) A certain fixed number of synapses must be excited within the period of
+> latent addition in order to excite a neuron at any time, and this number is
+> independent of previous activity and position on the neuron.
+>
+> (3) The only significant delay within the nervous system is synaptic delay.
+>
+> (4) The activity of any inhibitory synapse absolutely prevents excitation of the
+> neuron at that time.
+>
+> (5) The structure of the net does not change with time.
+
+Each supplies one piece of machinery:
+
+-   **(1)** makes "this neuron fired" a proposition. A neuron is either firing or
+    not, with no intermediate value, which is the two-valuedness propositional
+    logic requires. Continuous firing intensity would not admit this treatment.
+-   **(2)** turns the firing decision into a counting-against-a-threshold test,
+    which is where conjunction and disjunction come from.
+-   **(3)** discretizes time. If synaptic delay is the only delay that matters, time
+    is an integer counter of delay steps and \\(t-1\\) means one step earlier.
+-   **(4)** gives negation.
+-   **(5)** freezes the structure, which terminates the substitution argument in
+    Theorem 1.
+
+Assumption (5) also fixes the scope. A net whose structure never changes cannot
+learn, and the paper states this at the outset rather than arriving at it.
+
+
+## Four primitives {#four-primitives}
+
+The paper writes its logic in Carnap's _Language II_, augmented with the dot
+conventions from Russell and Whitehead's _Principia Mathematica_, stated on
+p. 102: "the most appropriate symbolism is that of Language II of Carnap (1938),
+augmented with various notations drawn from Russell and Whitehead (1927),
+including the _Principia_ conventions for dots."[^fn:1] Reading it gave me a
+headache, and getting comfortable enough to follow the proofs took me over two
+weeks. Everything below is in modern notation.
+
+The dot carries two unrelated jobs depending on position. Flanking a connective,
+as in `.≡.`, the dots are punctuation: brackets marking how far the equivalence
+reaches. Standing alone between two propositions, as in `N₁(t−1) . N₂(t−1)`, the
+same character is conjunction. Position is the only disambiguator, and dropping
+one dot silently changes how far the connective reaches.
+
+| Paper             | Modern            | What it means                                  |
+|-------------------|-------------------|------------------------------------------------|
+| `.≡.`             | `↔`               | equivalence — the dots are brackets, not "and" |
+| `.` between terms | `∧`               | conjunction                                    |
+| `∨`               | `∨`               | disjunction, unchanged                         |
+| `∼`               | `¬`               | negation                                       |
+| `S(P)`            | one-step delay    | P, one tick earlier — the z⁻¹ of DSP           |
+| `z₁`              | `t`               | the free time variable                         |
+| `Π`, `Σ`          | iterated `∧`, `∨` | AND as product, OR as sum, from Boole          |
+
+Before any theorem, the paper shows four minimal circuits. Everything afterwards
+is a matter of composing them.
+
+<figure style="margin:2rem 0">
+<svg viewBox="0 0 720 175" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Four minimal circuits: delay, OR, AND, and AND-NOT" style="width:100%;height:auto;color:inherit">
+<defs>
+<marker id="mp-exc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0,0L10,5L0,10z" fill="currentColor"/>
+</marker>
+<marker id="mp-inh" viewBox="0 0 12 12" refX="6" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+<circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+</marker>
+</defs>
+<!-- (a) delay -->
+<text x="90" y="20" text-anchor="middle" font-size="12" fill="currentColor" font-weight="600">(a) delay</text>
+<circle cx="42" cy="72" r="16" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="42" y="72" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c1</text>
+<line x1="58" y1="72" x2="116" y2="72" stroke="currentColor" stroke-width="1.6" marker-end="url(#mp-exc)"/>
+<circle cx="138" cy="72" r="16" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="138" y="72" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c2</text>
+<text x="90" y="140" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.85">N₂(t) ≡ N₁(t−1)</text>
+<text x="90" y="158" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.6">pass through, one tick later</text>
+<!-- (b) OR -->
+<text x="270" y="20" text-anchor="middle" font-size="12" fill="currentColor" font-weight="600">(b) OR</text>
+<circle cx="222" cy="46" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="222" y="46" text-anchor="middle" dy="0.35em" font-size="10" fill="currentColor">c1</text>
+<circle cx="222" cy="98" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="222" y="98" text-anchor="middle" dy="0.35em" font-size="10" fill="currentColor">c2</text>
+<line x1="236" y1="51" x2="296" y2="66" stroke="currentColor" stroke-width="1.6" marker-end="url(#mp-exc)"/>
+<line x1="236" y1="93" x2="296" y2="78" stroke="currentColor" stroke-width="1.6" marker-end="url(#mp-exc)"/>
+<circle cx="318" cy="72" r="16" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="318" y="72" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c3</text>
+<text x="318" y="104" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.7">θ = 1</text>
+<text x="270" y="140" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.85">N₃(t) ≡ N₁(t−1) ∨ N₂(t−1)</text>
+<text x="270" y="158" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.6">either input suffices</text>
+<!-- (c) AND -->
+<text x="450" y="20" text-anchor="middle" font-size="12" fill="currentColor" font-weight="600">(c) AND</text>
+<circle cx="402" cy="46" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="402" y="46" text-anchor="middle" dy="0.35em" font-size="10" fill="currentColor">c1</text>
+<circle cx="402" cy="98" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="402" y="98" text-anchor="middle" dy="0.35em" font-size="10" fill="currentColor">c2</text>
+<line x1="416" y1="51" x2="476" y2="66" stroke="currentColor" stroke-width="1.6" marker-end="url(#mp-exc)"/>
+<line x1="416" y1="93" x2="476" y2="78" stroke="currentColor" stroke-width="1.6" marker-end="url(#mp-exc)"/>
+<circle cx="498" cy="72" r="16" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="498" y="72" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c3</text>
+<text x="498" y="104" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.7">θ = 2</text>
+<text x="450" y="140" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.85">N₃(t) ≡ N₁(t−1) ∧ N₂(t−1)</text>
+<text x="450" y="158" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.6">same wiring, threshold raised</text>
+<!-- (d) AND-NOT -->
+<text x="630" y="20" text-anchor="middle" font-size="12" fill="currentColor" font-weight="600">(d) AND-NOT</text>
+<circle cx="582" cy="46" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="582" y="46" text-anchor="middle" dy="0.35em" font-size="10" fill="currentColor">c1</text>
+<circle cx="582" cy="98" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="582" y="98" text-anchor="middle" dy="0.35em" font-size="10" fill="currentColor">c2</text>
+<line x1="596" y1="51" x2="656" y2="66" stroke="currentColor" stroke-width="1.6" marker-end="url(#mp-exc)"/>
+<line x1="596" y1="93" x2="650" y2="80" stroke="currentColor" stroke-width="1.6" marker-end="url(#mp-inh)"/>
+<circle cx="678" cy="72" r="16" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="678" y="72" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c3</text>
+<text x="630" y="140" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.85">N₃(t) ≡ N₁(t−1) ∧ ¬N₂(t−1)</text>
+<text x="630" y="158" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.6">open circle = inhibitory synapse</text>
+</svg>
+<figcaption style="font-size:0.9rem;opacity:0.75;margin-top:0.6rem">The four circuits of Figure 1(a)–(d), redrawn. Solid arrowhead: excitatory synapse. Open circle: inhibitory synapse. θ is the neuron's threshold. The paper itself fixes θ at two throughout and varies the endbulb count per axon instead.</figcaption>
+</figure>
+
+Circuits (b) and (c) differ in one number. At θ = 1 the neuron fires when either
+input fired; at θ = 2 only when both did. Disjunction and conjunction are one
+mechanism — count the active excitatory synapses, compare against θ — at two
+parameter settings.
+
+The diagrams above are my redrawing. McCulloch and Pitts hold the threshold at
+two throughout and vary the number of endbulbs each axon terminates in: in
+Figure 1(b) each input arrives with two, so either alone reaches threshold; in
+1(c) each arrives with one, so both are needed. I have held the synapse count at
+one and moved the threshold instead. What decides the neuron either way is the
+ratio between what the active inputs contribute and what the threshold demands.
+
+Negation comes from assumption (4). One active inhibitory synapse vetoes the
+neuron regardless of what the excitatory side accumulated. In circuit (d), c2
+firing silences c3 whatever c1 does, giving \\(N\_1 \wedge \neg N\_2\\). The veto is
+absolute rather than a large negative weight competing against the excitatory
+total.
+
+Circuit (a) carries no logic at all. It brings two signal paths of unequal
+length into temporal alignment, which Theorem 2 requires.
+
+
+## Theorem 1: any net can be written as a formula {#theorem-1-any-net-can-be-written-as-a-formula}
+
+The first theorem goes from wiring to logic.[^fn:1]
+
+> Every net of order 0 can be solved in terms of temporal propositional
+> expressions.
+
+A net has **order 0** when it contains no circles — no chain of neurons looping
+back on itself. The paper defines order generally as the size of the smallest
+set of neurons whose removal leaves the net circle-free, so order 0 means the
+net was already acyclic. The **peripheral afferents** are the neurons with no
+axons synapsing onto them: the net's raw inputs. To **solve** a net is to write,
+for every non-input neuron, a formula fixing its firing in terms of the
+peripheral afferents alone.
+
+The proof is substitution. Each neuron's firing condition is written in terms of
+its immediate upstream neighbours. Any neighbour that is not a peripheral
+afferent has a formula of its own, so substitute it in. Repeat. Because there
+are no circles, no neuron can appear anywhere upstream of itself, so every path
+back toward the inputs has finite length. A neuron may well be substituted more
+than once — one with two downstream consumers is expanded in both — but the
+depth bounds the recursion, so it terminates and what is left mentions only the
+inputs.
+
+<figure style="margin:2rem 0">
+<svg viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Theorem 1: substituting upstream formulas until only peripheral afferents remain" style="width:100%;height:auto;color:inherit">
+<defs>
+<marker id="t1-exc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0,0L10,5L0,10z" fill="currentColor"/>
+</marker>
+<marker id="t1-inh" viewBox="0 0 12 12" refX="6" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+<circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+</marker>
+</defs>
+<text x="72" y="22" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.7">peripheral afferents</text>
+<text x="330" y="22" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.7">interior</text>
+<text x="560" y="22" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.7">output</text>
+<circle cx="72" cy="55" r="17" fill="none" stroke="currentColor" stroke-width="2.2"/>
+<text x="72" y="55" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c1</text>
+<circle cx="72" cy="118" r="17" fill="none" stroke="currentColor" stroke-width="2.2"/>
+<text x="72" y="118" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c2</text>
+<circle cx="72" cy="181" r="17" fill="none" stroke="currentColor" stroke-width="2.2"/>
+<text x="72" y="181" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c3</text>
+<circle cx="330" cy="80" r="17" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="330" y="80" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c4</text>
+<text x="330" y="110" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">θ = 1</text>
+<circle cx="330" cy="165" r="17" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="330" y="165" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c5</text>
+<text x="330" y="195" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">θ = 1</text>
+<circle cx="560" cy="120" r="19" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="560" y="120" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c6</text>
+<text x="560" y="152" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">θ = 2</text>
+<line x1="89" y1="60" x2="306" y2="74" stroke="currentColor" stroke-width="1.5" marker-end="url(#t1-exc)"/>
+<line x1="89" y1="113" x2="306" y2="86" stroke="currentColor" stroke-width="1.5" marker-end="url(#t1-exc)"/>
+<line x1="89" y1="125" x2="304" y2="158" stroke="currentColor" stroke-width="1.5" marker-end="url(#t1-inh)"/>
+<line x1="89" y1="180" x2="306" y2="172" stroke="currentColor" stroke-width="1.5" marker-end="url(#t1-exc)"/>
+<line x1="347" y1="86" x2="536" y2="112" stroke="currentColor" stroke-width="1.5" marker-end="url(#t1-exc)"/>
+<line x1="347" y1="159" x2="536" y2="130" stroke="currentColor" stroke-width="1.5" marker-end="url(#t1-exc)"/>
+<line x1="30" y1="228" x2="690" y2="228" stroke="currentColor" stroke-width="1" opacity="0.25"/>
+<text x="30" y="250" font-size="10.5" fill="currentColor" opacity="0.85">N₆(t) ≡ N₄(t−1) ∧ N₅(t−1)</text>
+<text x="330" y="250" font-size="9.5" fill="currentColor" opacity="0.55">← still mentions interior neurons</text>
+<text x="30" y="270" font-size="10.5" fill="currentColor" opacity="0.85">N₄(t−1) ≡ N₁(t−2) ∨ N₂(t−2)&#160;&#160;&#160;&#160;N₅(t−1) ≡ N₃(t−2) ∧ ¬N₂(t−2)</text>
+<text x="30" y="291" font-size="10.5" fill="currentColor">N₆(t) ≡ (N₁(t−2) ∨ N₂(t−2)) ∧ (N₃(t−2) ∧ ¬N₂(t−2))</text>
+<text x="470" y="291" font-size="9.5" fill="currentColor" opacity="0.55">← inputs only. Done.</text>
+</svg>
+<figcaption style="font-size:0.9rem;opacity:0.75;margin-top:0.6rem">Theorem 1 as substitution. Each interior neuron's formula is replaced by the formula of its own inputs. With no circles in the net, the rewriting terminates, leaving an expression in the peripheral afferents alone.</figcaption>
+</figure>
+
+The class of formulas this produces is what the paper calls a _temporal
+propositional expression_, or TPE, defined by a recursion with three clauses: a
+bare predicate is a TPE; if \\(S\_1\\) and \\(S\_2\\) are TPEs then so are \\(S S\_1\\)
+(the same expression shifted one step into the past), \\(S\_1 \vee S\_2\\), \\(S\_1 .
+S\_2\\), and \\(S\_1 . \sim S\_2\\); nothing else is a TPE. The third clause bounds
+the set, which is what permits the next theorem to quantify over all of them.
+
+The \\(S\\) is a delay operator, the \\(z^{-1}\\) of signal processing. \\(S(P)\\) is
+a new proposition whose value at time \\(t\\) is \\(P\\)'s value at \\(t-1\\). It
+takes a proposition and returns a proposition, so it applies to an arbitrarily
+complicated subexpression without reference to that subexpression's internal
+structure. For a single named neuron, \\(N\_1(t-1)\\) does the same work without
+the operator. \\(S\\) is needed when the thing being shifted is a whole compound
+expression, or a subnet known only by its behaviour.
+
+
+## Theorem 2: any formula can be built as a net {#theorem-2-any-formula-can-be-built-as-a-net}
+
+The second theorem is the converse.[^fn:1]
+
+> Every TPE is realizable by a net of order zero.
+
+The proof is induction over the three clauses defining a TPE. A bare predicate
+is realized by a single peripheral afferent. For the compound cases, assume the
+subexpressions already have nets realizing them, and combine those nets using
+primitives (b), (c), and (d).
+
+Two subnets need not have the same depth. If one produces its answer after three
+synaptic delays and the other after one, feeding both into a combining neuron
+compares values from different moments and the combined net computes something
+else. The paper pads the shallower branch with plain delay stages — \\(S^m\\) and
+\\(S^n\\) "for suitable \\(m\\) and \\(n\\)" — until both arrive on the same tick.
+
+<figure style="margin:2rem 0">
+<svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Theorem 2: padding the shallower subnet with delays so both branches arrive together" style="width:100%;height:auto;color:inherit">
+<defs>
+<marker id="t2-exc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0,0L10,5L0,10z" fill="currentColor"/>
+</marker>
+</defs>
+<rect x="28" y="36" width="176" height="62" rx="8" fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.9"/>
+<text x="116" y="60" text-anchor="middle" font-size="11" fill="currentColor">net realizing S₁</text>
+<text x="116" y="80" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.7">depth 3</text>
+<rect x="28" y="166" width="176" height="62" rx="8" fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.9"/>
+<text x="116" y="190" text-anchor="middle" font-size="11" fill="currentColor">net realizing S₂</text>
+<text x="116" y="210" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.7">depth 1</text>
+<line x1="204" y1="67" x2="488" y2="107" stroke="currentColor" stroke-width="1.5" marker-end="url(#t2-exc)"/>
+<text x="330" y="80" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.6">arrives at t+3, no padding needed</text>
+<line x1="204" y1="197" x2="266" y2="197" stroke="currentColor" stroke-width="1.5" marker-end="url(#t2-exc)"/>
+<circle cx="290" cy="197" r="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2"/>
+<text x="290" y="197" text-anchor="middle" dy="0.35em" font-size="10" fill="currentColor">S</text>
+<line x1="305" y1="197" x2="348" y2="197" stroke="currentColor" stroke-width="1.5" marker-end="url(#t2-exc)"/>
+<circle cx="372" cy="197" r="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2"/>
+<text x="372" y="197" text-anchor="middle" dy="0.35em" font-size="10" fill="currentColor">S</text>
+<line x1="387" y1="192" x2="488" y2="140" stroke="currentColor" stroke-width="1.5" marker-end="url(#t2-exc)"/>
+<text x="331" y="232" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.6">two delay stages: primitive (a), twice</text>
+<circle cx="512" cy="123" r="20" fill="none" stroke="currentColor" stroke-width="1.6"/>
+<text x="512" y="123" text-anchor="middle" dy="0.35em" font-size="11" fill="currentColor">c</text>
+<text x="512" y="158" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">θ = 2 → S₁ ∧ S₂</text>
+<line x1="532" y1="123" x2="596" y2="123" stroke="currentColor" stroke-width="1.5" marker-end="url(#t2-exc)"/>
+<text x="648" y="118" text-anchor="middle" font-size="10.5" fill="currentColor">combined</text>
+<text x="648" y="134" text-anchor="middle" font-size="10.5" fill="currentColor">net</text>
+<text x="360" y="266" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.75">Both branches now land on the same tick, so the combining neuron compares contemporaries.</text>
+</svg>
+<figcaption style="font-size:0.9rem;opacity:0.75;margin-top:0.6rem">Theorem 2's induction step. Without the delay padding, combining two subnets of unequal depth compares values from different moments.</figcaption>
+</figure>
+
+Nets of order 0 and TPEs therefore describe the same set of behaviours.
+
+
+## Theorem 3: almost every sentence you can write {#theorem-3-almost-every-sentence-you-can-write}
+
+TPE is defined with a spare set of connectives: delay, disjunction, conjunction,
+conjunction-with-negation. Ordinary logical writing uses implication,
+equivalence, and negation applied anywhere. Theorem 3 covers the difference.
+
+Take any sentence built however you want out of elementary statements of the
+form \\(p(z\_1 - zz)\\) — "neuron \\(p\\) fired \\(zz\\) steps ago" — using negation,
+disjunction, conjunction, implication, and equivalence freely. Theorem 3 says
+such a sentence is a TPE, and therefore realizable, **if and only if** it is false
+when all its constituents are assumed false. Equivalently: if and only if its
+Hilbert disjunctive normal form contains no term made exclusively of negated
+terms.[^fn:1]
+
+<figure style="margin:2rem 0">
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Theorem 3: sentences false when nothing fired are realizable; sentences true of a silent net are not" style="width:100%;height:auto;color:inherit">
+<rect x="40" y="28" width="640" height="186" rx="12" fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.55"/>
+<text x="60" y="52" font-size="11" fill="currentColor" opacity="0.75">all sentences over &quot;p fired zz steps ago&quot;, built with ¬ ∨ ∧ → ↔</text>
+<rect x="66" y="70" width="440" height="124" rx="10" fill="none" stroke="currentColor" stroke-width="2"/>
+<text x="286" y="112" text-anchor="middle" font-size="13" fill="currentColor" font-weight="600">false when nothing fired</text>
+<text x="286" y="136" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.75">is a TPE — Theorem 2 builds the net</text>
+<text x="286" y="158" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.7">p ∧ q&#160;&#160;&#160;p ∧ ¬q&#160;&#160;&#160;p ∧ ¬p</text>
+<text x="286" y="176" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.6">contradictions included — a neuron that never fires</text>
+<rect x="526" y="70" width="134" height="124" rx="10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="4 3"/>
+<text x="593" y="106" text-anchor="middle" font-size="11.5" fill="currentColor">true when</text>
+<text x="593" y="122" text-anchor="middle" font-size="11.5" fill="currentColor">nothing fired</text>
+<text x="593" y="146" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">¬p&#160;&#160;&#160;p ∨ ¬p</text>
+<text x="593" y="162" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">p → q</text>
+<text x="593" y="180" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.6">not realizable</text>
+<text x="360" y="236" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.75">A net with silent inputs fires nowhere, so nothing can realize a sentence that is true of silence.</text>
+</svg>
+<figcaption style="font-size:0.9rem;opacity:0.75;margin-top:0.6rem">Theorem 3 widens the result from the restricted TPE grammar to ordinary logical writing. The excluded region is not the contradictions — those are realizable, by a neuron that never fires — but the sentences that hold of a net in which nothing fired at all.</figcaption>
+</figure>
+
+What that rules out is not contradictions but their opposite: sentences that
+come out true when nothing fired. \\(\sim p\\) is one, as is any tautology. Each
+asserts something holds of a net whose peripheral afferents are all silent, and
+a net of order zero with silent inputs fires nowhere.
+
+Contradictions are realizable. \\(p . \sim p\\) is the \\(S\_1 . \sim S\_2\\) clause
+with the same expression on both sides, and the net for it is a neuron that
+never fires. With Theorem 3 the translation runs in both directions and covers
+everything statable about who fired when.
+
+
+## What is actually being proved here {#what-is-actually-being-proved-here}
+
+My reading, after two weeks with it: this is a circuit-synthesis result that
+happens to be about neurons. I went in expecting the origin of neural networks.
+What I found was a proof about wiring.
+
+No error signal appears anywhere in this paper. No target output, no correction,
+nothing that changes in response to experience. The vocabulary does not exist
+yet.
+
+Theorem 1: hand it a net, get back a formula. Theorem 2: hand it a formula, get
+back a net. Either way you supply the answer first. That is circuit
+realizability — given a specification, exhibit a circuit meeting it — and it
+settles what threshold units can express. It says nothing about how a net would
+find its own specification.
+
+Assumption (5) rules that out from the start. Whoever builds the net sets the
+wiring and the thresholds, and they stay set.
+
+McCulloch and Pitts do come back to changing synapses, at the end of the same
+section, among a group of equivalence theorems. They describe a mechanism for
+it: an axon terminal that cannot at first excite the next neuron becomes an
+ordinary synapse if it is active at a moment when that neuron fires. A rule for
+learning, written down in 1943. Theorem 7 then removes the need for it —
+_Alterable synapses can be replaced by circles_. Hand them a net whose synapses
+change and they hand back an equivalent net of fixed structure with a loop in
+it. Learning is absorbed into something assumption (5) already allows. That
+tells you what a fixed arrangement can imitate. It gives a net no way to change
+itself, and that gap is what the next fifteen years are about.
+
+So the contribution is narrower than "they invented the neural network." A
+neuron here counts its inputs, compares the count against a threshold, and falls
+silent if an inhibitory synapse fired. Everything complicated comes from how
+many of them you have and how you wire them together — computation as a property
+of the arrangement, not of any individual part.
+
+Nothing here accounts for the flukeprints. If the rule I picked up that
+afternoon could be written down, this paper proves a net could compute it. How
+an hour of looking installed it in me is a question about a structure that
+changes, and assumption (5) forbids that.
+
+
+## What 1943 got right, and what it left out {#what-1943-got-right-and-what-it-left-out}
+
+All-or-none holds for the spike. Cross threshold at the axon hillock and the
+action potential that follows has the same amplitude and shape every time,
+however hard you pushed it. Assumption (1) is standard physiology.
+
+Everything before the spike is graded. Synaptic input arrives as postsynaptic
+potentials that sum across space and time until they reach threshold or fail to,
+and assumption (2) flattens that into counting active synapses. The output side
+loses more. Much of what neurons communicate rides on firing rate, which is
+continuous, not on whether one binary event landed in one tick. Retinal
+photoreceptors never fire action potentials at all — they signal entirely with
+graded potentials.
+
+Absolute inhibition is the weakest of the five, and the authors said so. Most
+inhibition is graded, and enough excitation will outvote it. Two mechanisms come
+close to a real veto. Shunting inhibition opens chloride channels that sit near
+the resting potential, so rather than dragging the membrane down it
+short-circuits the excitatory current — division instead of subtraction.
+Chandelier cells target the axon initial segment, the exact spot where the spike
+starts, which lets them gate the output almost regardless of what the dendrites
+did.[^fn:3]
+
+Each assumption takes something real and specialized and promotes it to a
+universal rule. The authors made that move explicit for inhibition, where they
+picked the absolute reading and argued the difference was immaterial to the
+argument. They did not audit the other four the same way.
+
+Assumption (5) is not on the physiology list, and it is the one that gives way
+next. Real synapses change.
+
+
+## The second half of the question {#the-second-half-of-the-question}
+
+If the wiring is fixed, someone had to know the answer before the net ran. For a
+logic gate that is no obstacle — you know what XOR is, and you can draw it.
+Nobody can draw a cat that way.
+
+What is missing is a way for the net to change its own connection strengths
+according to what it got wrong. That means dropping assumption (5), replacing
+counted synapses with real-valued weights so the changes can be small, and
+defining the error.
+
+The fifteen years in between are not empty. The sketch McCulloch and Pitts
+proved away — a terminal that becomes effective once it fires alongside the cell
+— is what Hebb states as a rule in 1949: a cell that repeatedly takes part in
+firing another has its efficiency in doing so increased.[^fn:4] Nothing in that
+rule compares the output against what was wanted; it counts coincidences. The
+comparison arrives with Rosenblatt's perceptron in 1958.
+
+---
+
+From Pixels to Tensors Series:
+
+-   Part 1: [2D Rendering Baselines](@/technical/pixels-to-tensors/part-1-2d-rendering.md)
+-   Part 2: [The 3D Graphics Pipeline](@/technical/pixels-to-tensors/part-2-3d-pipeline.md)
+-   Part 3: [Symbolic AI](@/technical/pixels-to-tensors/part-3-symbolic-ai.md)
+-   Part 4: McCulloch–Pitts
+
+---
+
+<br>
+
+**Footnotes**
+
+[^fn:1]: McCulloch, W.S. &amp; Pitts, W. (1943).
+    ["A
+    Logical Calculus of the Ideas Immanent in Nervous Activity"](https://www.csulb.edu/~cwallis/382/readings/482/mccolloch.logical.calculus.ideas.1943.pdf). _Bulletin of
+    Mathematical Biophysics_ 5, 115–133. Reprinted in _Bulletin of Mathematical
+    Biology_ 52 (1990), 99–115; the reprint pagination is the one I read from. The
+    five assumptions are on p. 101, Theorem 1 on p. 102, the TPE recursion and
+    general formula on p. 103, Theorems 2 and 3 on p. 104, and the Figure 1 circuits
+    on p. 105. The equivalence theorems close Section 2: Theorem 4 (relative and
+    absolute inhibition) and Theorem 5 (extinction) on p. 107, Theorems 6 and 7
+    on p. 108. Section 3, on nets **with** circles, begins after them on the same
+    page; that is where recursive functions and memory enter, the authors call the
+    case "very much more difficult", and it is not covered here.
+[^fn:2]: Warren S. McCulloch, "What Is a Number, that a Man May Know It, and a
+    Man, that He May Know a Number?", the Ninth Alfred Korzybski Memorial Lecture
+    (1960), published in _General Semantics Bulletin_ Nos. 26–27. Collected in
+    McCulloch's _Embodiments of Mind_ (MIT Press, 1965). McCulloch on film, talking
+    about this material: [Interview with Warren McCulloch](https://www.youtube.com/watch?v=wawMjJUCMVw).
+[^fn:3]: For shunting inhibition, axo-axonic targeting of the axon initial
+    segment, and graded signalling in non-spiking cells, any standard neuroscience
+    reference covers the ground; Kandel et al., _Principles of Neural Science_, is
+    the usual one.
+[^fn:4]: Donald O. Hebb, _The Organization of Behavior: A Neuropsychological
+    Theory_ (Wiley, 1949). Hebb's own formulation: "When an axon of cell A is near
+    enough to excite a cell B and repeatedly or persistently takes part in firing
+    it, some growth process or metabolic change takes place in one or both cells
+    such that A's efficiency, as one of the cells firing B, is increased." The
+    popular compression "cells that fire together wire together" is Carla Shatz's,
+    not Hebb's.

@@ -393,7 +393,8 @@ From Pixels to Tensors Series:
 
 -   Part 1: [2D Rendering Baselines](@/technical/pixels-to-tensors/part-1-2d-rendering.md)
 -   Part 2: The 3D Graphics Pipeline
--   Part 3: [Symbolic AI](@/technical/pixels-to-tensors/part-3-symoblic-ai.md)
+-   Part 3: [Symbolic AI](@/technical/pixels-to-tensors/part-3-symbolic-ai.md)
+-   Part 4: [McCulloch–Pitts](@/technical/pixels-to-tensors/part-4-mcculloch-pitts.md)
 
 ---
 
