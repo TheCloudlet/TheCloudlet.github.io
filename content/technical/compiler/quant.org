@@ -4,7 +4,7 @@
 #+DATE: 2026-07-23
 #+ZOLA_DRAFT: true
 
-#+ZOLA_SECTION:
+#+ZOLA_SECTION: technical/compiler
 #+ZOLA_CATEGORIES: machine-learning
 #+ZOLA_TAGS: quantization mlir onnx qdq fixed-point
 

@@ -347,7 +347,8 @@ From Pixels to Tensors Series:
 
 - Part 1: 2D Rendering Baselines
 - Part 2: [[file:part-2-3d-pipeline.org][The 3D Graphics Pipeline]]
-- Part 3: [[file:part-3-symoblic-ai.org][Symbolic AI]]
+- Part 3: [[file:part-3-symbolic-ai.org][Symbolic AI]]
+- Part 4: [[file:part-4-mcculloch-pitts.org][McCulloch–Pitts]]
 
 -----
 

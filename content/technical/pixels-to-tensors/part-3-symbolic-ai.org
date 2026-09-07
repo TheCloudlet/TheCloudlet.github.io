@@ -6,6 +6,7 @@
 #+ZOLA_SECTION: technical/pixels-to-tensors
 #+ZOLA_CATEGORIES: machine-learning
 #+ZOLA_TAGS: symbolic-ai gofai expert-systems forward-chaining lisp mlir pixels-to-tensors
+#+ZOLA_ALIASES: /technical/pixels-to-tensors/part-3-symoblic-ai/
 #+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (toc . t))
 
 * Intro
@@ -180,6 +181,7 @@ From Pixels to Tensors Series:
 - Part 1: [[file:part-1-2d-rendering.org][2D Rendering Baselines]]
 - Part 2: [[file:part-2-3d-pipeline.org][The 3D Graphics Pipeline]]
 - Part 3: Symbolic AI
+- Part 4: [[file:part-4-mcculloch-pitts.org][McCulloch–Pitts]]
 
 -----
 

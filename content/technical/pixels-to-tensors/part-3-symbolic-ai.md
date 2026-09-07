@@ -3,6 +3,7 @@ title = "From Pixels to Tensors, Part 3: Symbolic AI"
 author = ["Yi-Ping Pan (Cloudlet)"]
 description = "Symbolic AI failed for reasons that have nothing to do with hardware — the knowledge acquisition bottleneck and the unknown unknowns. The parallel machine's role was narrower: to decide which successor could run at scale. Covers the physical symbol system hypothesis, forward chaining, and where symbolic rewriting still lives."
 date = 2026-07-05
+aliases = ["/technical/pixels-to-tensors/part-3-symoblic-ai/"]
 draft = false
 [taxonomies]
   tags = ["symbolic-ai", "gofai", "expert-systems", "forward-chaining", "lisp", "mlir", "pixels-to-tensors"]
@@ -190,6 +191,7 @@ From Pixels to Tensors Series:
 -   Part 1: [2D Rendering Baselines](@/technical/pixels-to-tensors/part-1-2d-rendering.md)
 -   Part 2: [The 3D Graphics Pipeline](@/technical/pixels-to-tensors/part-2-3d-pipeline.md)
 -   Part 3: Symbolic AI
+-   Part 4: [McCulloch–Pitts](@/technical/pixels-to-tensors/part-4-mcculloch-pitts.md)
 
 ---
 

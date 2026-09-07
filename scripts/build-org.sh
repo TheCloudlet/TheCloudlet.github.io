@@ -81,7 +81,12 @@ lint_org() {
         fi
 
         # Bare image links (no alt text → ox-zola emits Hugo figure shortcode)
-        bare=$(grep -n "^\[\[/images/[^]]*\]\]$" "$org" 2>/dev/null || true)
+        # Skip SRC/EXAMPLE blocks so articles documenting the wrong form don't self-trip.
+        bare=$(awk '
+            /^#\+BEGIN_(SRC|EXAMPLE|QUOTE|VERSE)/ { in_block=1 }
+            /^#\+END_(SRC|EXAMPLE|QUOTE|VERSE)/   { in_block=0; next }
+            !in_block && /^\[\[\/images\/[^]]*\]\]$/ { print NR": "$0 }
+        ' "$org" 2>/dev/null || true)
         if [ -n "$bare" ]; then
             lint_err "$org — bare image link (add alt text: [[/path/img.png][alt]])"
             echo "$bare" | sed 's/^/     /'
@@ -117,13 +122,15 @@ fi
             fi
         fi
 
-# Check for legacy TAXONOMIES keywords
-if grep -q "ZOLA_TAXONOMIES_" "$org"; then
+# Check for legacy TAXONOMIES keywords.
+# Anchored to column 0: only a real keyword line counts, not prose or ~verbatim~
+# mentions in articles that document the legacy form.
+if grep -q "^#+ZOLA_TAXONOMIES_" "$org"; then
     lint_err "$org — legacy ZOLA_TAXONOMIES_ keyword (use ZOLA_TAGS/ZOLA_CATEGORIES)"
 fi
 
-# Check for unsupported EXTRA keywords
-if grep -q "ZOLA_EXTRA_" "$org"; then
+# Check for unsupported EXTRA keywords (same column-0 rule)
+if grep -q "^#+ZOLA_EXTRA_" "$org"; then
     lint_err "$org — unsupported ZOLA_EXTRA_ keyword (use ZOLA_CUSTOM_FRONT_MATTER)"
 fi
 
