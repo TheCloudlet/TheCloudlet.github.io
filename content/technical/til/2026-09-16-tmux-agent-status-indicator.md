@@ -1,0 +1,559 @@
++++
+title = "Agent State in the Tmux Status Line"
+author = ["Yi-Ping Pan (Cloudlet)"]
+description = "Turning the tmux window list into a live agent-status board, and why the state has to be scraped from the pane's visible screen rather than its title or foreground process."
+date = 2026-09-16
+draft = false
+[taxonomies]
+  tags = ["tmux", "dotfiles", "cli", "workflow", "agents", "pingme"]
+  categories = ["til"]
+[extra]
+  toc = true
++++
+
+## The problem {#the-problem}
+
+Running several agent sessions (Claude Code, Codex, [PingMe](https://github.com/TheCloudlet/PingMe)) side
+by side in tmux windows makes it easy to lose track of which window is still
+working, which is stuck waiting on a decision, and which finished. Checking
+each window by hand doesn't scale past three or four of them.
+
+Herdr is the usual suggestion in this niche: an agent-first terminal
+multiplexer that classifies sessions as working, blocked, done, or idle and
+shows them in a sidebar. A week with it surfaced two objections — it's a
+separate surface to context-switch into for information that belongs next to
+the windows it describes, and it replaces tmux rather than fitting the
+existing habit of glancing at a status line.
+
+Herdr also tracks a fourth state, **done** — a turn that finished while the
+window was not visible, cleared on the next visit. That requires per-pane
+focus history, which the setup below does not keep; done collapses into
+idle, leaving three states.
+
+The target is the same classification, rendered in the tmux window list.
+Two signals looked like they carried it and did not.
+
+
+## Attempt 1: the pane title {#attempt-1-the-pane-title}
+
+tmux tracks `pane_title` per pane, and programs update it via an OSC escape
+sequence. Agent CLIs are interactive TUIs, so the title is the first
+candidate for carrying their state.
+
+```text
+set -g @agent-status \
+'#{?#{m:*Action Required*,#{pane_title}},#[fg=colour196]#[bold]!,'\
+'#{?#{m/r:(^| )[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏◐◓◑◒]( |$),#{pane_title}},#[fg=colour220]●,'\
+'#{?#{m/r:(^|/)(codex|claude|pingme)$,#{pane_current_command}},#[fg=colour34]✓,}}}'
+```
+
+Yellow never appeared once. Sampling the title twice a second through a full
+working turn explains why:
+
+```text
+$ for i in $(seq 1 40); do tmux list-panes -a -F '#{pane_id} [#{pane_title}]'; sleep 0.5; done | sort -u
+%0 [✳ Tmux config article]
+%1 [✳ Claude Code]
+```
+
+Two unique values across the whole sample. Claude Code sets its title once
+and never touches it again — it carries the session's name, not its state,
+and no regex over a constant string will produce a state machine.
+
+That sample contained two Claude panes. Grok, on the same tmux server:
+
+```text
+t=1  title=[Review of tmux agent-status article - grok]
+t=2  title=[⠋ - Waiting for response… - Review of tmux agent-status article - grok]
+t=4  title=[⠋ - Thinking - Review of tmux agent-status article - grok]
+t=7  title=[⠸ - Thinking - Review of tmux agent-status article - grok]
+```
+
+A braille spinner, in the title, from the character class the yellow rule
+matched on. The title is inert for Claude Code, not for grok; a per-agent
+rule set could read grok's title directly. The screen remains the better
+target because it does not depend on a program emitting OSC title updates
+at all.
+
+
+## Attempt 2: the foreground process {#attempt-2-the-foreground-process}
+
+With Claude's title ruled out, the next candidate is `pane_current_command`:
+the process tmux considers to be in the foreground. An agent that's busy
+running a tool should look different from one sitting at a prompt.
+
+```text
+$ tmux list-panes -a -F '#{pane_id} cmd=[#{pane_current_command}]'
+%0 cmd=[2.1.267]
+%1 cmd=[2.1.273]
+```
+
+Not `claude`. The install layout accounts for it:
+
+```text
+$ ls -l ~/.local/bin/claude
+... -> ~/.local/share/claude/versions/2.1.273
+
+$ ls -l ~/.grok/bin/grok
+... -> ../downloads/grok-1.0.30-macos-aarch64
+```
+
+Both launchers are symlinks to a versioned binary, and the process carries
+that binary's filename. tmux reports it: `claude` as `2.1.267`, grok as
+`grok-1.0.30-mac`, truncated from `grok-1.0.30-macos-aarch64`. The value
+identifies a release artifact rather than the program.
+
+The green icon never lit on this machine either. Its rule required
+`pane_current_command` to end in `claude`, which this value never does, so
+the third branch fell through to the empty fallback alongside the other two.
+
+The process tree contains a process whose `comm` is `claude`, whatever the
+pane's foreground command is named, so `ps -o comm=` over the tree answers
+the presence question. State is a separate matter: `pane_current_command`
+identifies a process, and process identity does not encode "thinking"
+versus "waiting for approval."
+
+
+## What actually carries the state {#what-actually-carries-the-state}
+
+[agenmux](https://github.com/snirt/agenmux), an open-source tmux agent monitor that ports
+Herdr's detection rules, documents its method:
+
+> Detection is scraping-only: agents are identified by walking each pane's
+> process tree, state is inferred from the pane's visible screen and title.
+
+The rendered terminal buffer, then, rather than the title or the process.
+Herdr matches its rules for Claude Code and Codex against a snapshot of the
+bottom of the live buffer.
+
+tmux exposes exactly that through `capture-pane`. The bottom of a working
+Claude Code pane:
+
+```text
+✽ Brewing… (2m 14s · ↓ 3.9k tokens)
+─────────────────────────────────────────────────────
+❯
+─────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle) · esc to interrupt · ← for agents
+```
+
+And the same pane once it's idle:
+
+```text
+─────────────────────────────────────────────────────
+❯
+─────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents
+```
+
+`esc to interrupt` is present in one and absent in the other. The hint can
+only be rendered while something is interruptible, which makes it the state.
+The activity line above it carries a spinner as well (`✽ Brewing…`), through
+the glyphs `✳ ✽ ✶` — a different character class from the braille and circle
+set the first attempt searched for, on a different surface.
+
+This also explains the platform confusion that prompted the rewrite. The
+same config appeared to work on a Linux machine whose title was equally
+static — but what lit there was green, and green only ever meant "an agent
+process is in this pane," which `pane_current_command` can answer on a box
+where it resolves to `claude`. It was presence detection, not a state
+machine, and the title had nothing to do with either.
+
+
+## The implementation {#the-implementation}
+
+Two signals, each answering the question it can actually answer: the process
+tree for "which agent is here", the screen buffer for "what is it doing".
+
+The walk returns the agent's name rather than a yes/no, because the screen
+rules turn out to differ per agent:
+
+```sh
+pane_agent() {
+	root="$1"; pids="$root"; queue="$root"
+	while [ -n "$queue" ]; do
+		pid="${queue%% *}"; queue="${queue#"$pid"}"; queue="${queue# }"
+		for c in $(pgrep -P "$pid" 2>/dev/null); do
+			case " $pids " in
+			*" $c "*) ;;
+			*) pids="$pids $c"; queue="$queue $c" ;;
+			esac
+		done
+	done
+	ps -o comm= -p $pids 2>/dev/null |
+		sed -nE 's|.*/||; /^(claude|claude-code|codex|grok|pingme)$/p' | head -n 1
+}
+```
+
+Then each agent gets its own patterns and its own order. Sketched as
+pseudocode — `match` stands in for a grep against the captured screen, and
+the patterns are elided; the [appendix](#appendix-the-full-poller) has the runnable version:
+
+```text
+claude, claude-code, pingme:
+    working  if screen matches 'esc to interrupt|ctrl+c to interrupt'
+    idle     if screen matches a bare '❯' prompt line
+    action   if screen matches 'do you want to proceed?|waiting for permission|…'
+    idle     otherwise
+
+codex:
+    action   if screen matches 'press enter to confirm or esc to cancel|…'
+    working  if screen matches 'esc to interrupt'
+    idle     otherwise
+
+grok:
+    action   if screen matches '<n>/<n>:select|Allow …?|No, reject|dialog footer hints'
+    working  if screen matches '[stop]|Ctrl+c:cancel'
+    idle     otherwise
+```
+
+Claude and Codex both print `esc to interrupt`, and order their rules
+differently around it. Claude treats the hint as authoritative and checks
+working first, with a bare-prompt idle rule ahead of the blocked patterns so
+an answered permission prompt left on screen does not read as waiting. Codex
+checks its approval prompts first. Reversing either order makes every prompt
+read as busy, or every busy turn read as blocked.
+
+One caveat on provenance: herdr and agenmux check the **title** before the
+screen for Codex (`CHECK_ORDER="bt wt bs ws"`). Since the title is inert
+here, only their screen rules carry over, and the ordering above is between
+screen rules alone. `pingme` rides along on Claude's rules because it wraps
+Claude Code and renders its UI; that grouping is an assumption, not
+something separately observed.
+
+Grok needed the most work. agenmux ships no manifest for it; herdr does
+([grok.toml](https://github.com/herdrdev/herdr/blob/master/src/detect/manifests/grok.toml)), but against Grok Build 0.2.101, whose
+footer differs from the 1.0.30 installed here — it expects
+`Ctrl+.:shortcuts` where this build prints `Ctrl+x:shortcuts`. Close enough
+to confirm the approach, far enough that the strings had to be re-read from
+a live session.
+
+A plain conversation suggested `Esc:cancel`, which sits in the footer while
+a turn runs and disappears when it ends. That rule held for chat and failed
+on the first shell command: during a long tool call the spinner text stops
+updating and the cancel hint becomes `Ctrl+c:cancel`. A pane spending twenty
+seconds in `sleep` reported idle for the whole turn.
+
+The `[stop]` affordance on the activity line persists across both cases.
+Blocked is still checked first, since grok's approval prompt retains `[stop]`
+from the tool call that raised it, and a working-first order would read every
+permission prompt as busy.
+
+herdr's manifest classifies `ctrl+c:cancel` as a blocked signal, paired with
+`:select` and `ctrl+o:yolo`, rather than a working fallback. Treating it as
+working, as below, depends entirely on the blocked patterns matching first;
+a permission footer they miss reads as busy instead of waiting.
+
+Both failures came from picking a signal out of a single observed scenario,
+and both surfaced when a second scenario ran. The rules cover the range of
+states actually watched.
+
+The listing above is trimmed for reading; the full script, with every pattern
+spelled out, is in the [appendix](#appendix-the-full-poller).
+
+This runs as a background loop rather than inside the format string. The
+earlier version called a script from `#(...)`, which fails in a subtle way:
+`#()` is not a synchronous call but a job whose result is cached for the
+**next** redraw, so state computed that way is only as fresh as the last time
+something drew the screen. A detached session has no redraws at all. Process
+trees and screen contents are facts about the machine, true whether or not
+anyone is looking — so they belong on their own clock, with the format string
+reduced to a pure read:
+
+```text
+set -g @agent-status \
+'#{?#{==:#{@agent-state},action},#[fg=colour196]#[bold]!,'\
+'#{?#{==:#{@agent-state},working},#[fg=colour220]●,'\
+'#{?#{==:#{@agent-state},idle},#[fg=colour34]✓,}}}'
+
+set-window-option -g window-status-format '#{E:@agent-status}#[fg=colour18]#[nobold]#I:#W#F '
+set-window-option -g window-status-current-format '#{E:@agent-status}#[fg=colour252]#[nobold]#I:#W#[fg=colour196]#[bold]* '
+```
+
+Both lines are needed: tmux renders the current window through its own
+format, so setting only the first leaves the window you're looking at
+without an icon.
+
+`set-option -p` scopes each answer to one pane. The window list renders one
+icon per window, resolved against its active pane, so a split running two
+agents surfaces one of them. The loop starts once per server, guarded by a
+PID file rather than `pgrep -f agent-status-poll.sh`: a wrapper shell whose
+own argv contains the script name is a false positive for any
+name-substring guard.
+
+```text
+if-shell '! kill -0 "$(cat /tmp/tmux-agent-status-poll.pid 2>/dev/null)" 2>/dev/null' \
+  'run-shell -b "~/.config/tmux/agent-status-poll.sh"'
+```
+
+
+## Result {#result}
+
+The window list becomes the board: red `!` needs a decision, yellow `●` is
+working, green `✓` is idle and ready, unmarked is a plain shell. It stays
+correct whether or not a client is attached, because nothing about the
+detection depends on being watched.
+
+![tmux status line showing a green check on an idle Claude window and a yellow dot on a working grok window](/images/2026-09-16-tmux-agent-status.webp)
+
+In the bottom line, `✓1:123444` is an idle Claude pane and
+`●2:grok-1.0.30-mac` is grok mid-turn, its window name the versioned-binary
+filename from Attempt 2. The working rule matched on that pane's
+`Waiting for response… 6.8s` line and its `[stop]` chip.
+
+Titles and process names are metadata, and each held for some agents and not
+others. Claude's title is a fixed session name; grok's carries a live
+spinner. Grok's foreground command is its own binary; Claude's is a version
+string. The screen is the surface every one of them populates, being the
+surface they exist to draw.
+
+The cost is per-agent rules. Three agents required three rule sets and two
+orderings, and grok's were re-read from a live session because herdr's
+manifest targets Build 0.2.101 against the 1.0.30 installed here. Those
+rules match footer strings, so they break whenever an agent redesigns its
+footer, silently and without a version number to check against.
+
+
+## Appendix: the full setup {#appendix-the-full-poller}
+
+
+### The poller {#the-poller}
+
+`~/.config/tmux/agent-status-poll.sh`, verified against claude 2.1.x and
+grok 1.0.30 on macOS. Codex's patterns are agenmux's, carried over
+untested. Two known rough edges: the PID file lives at a fixed `/tmp` path,
+so two tmux servers on one machine would contend for it, and grok's rules
+are pinned to the footer text of one release — a redesign there breaks them
+silently, which is the standing cost of screen scraping.
+
+```sh
+#!/bin/sh
+# Background poller: every second, classify each pane's agent state and write
+# it into that pane's @agent-state user option, which the status line reads.
+#
+# Two signals, both necessary:
+#   - process tree: which agent is running here? These CLIs launch through a
+#     symlink to a versioned binary, so pane_current_command reports that
+#     filename (claude -> "2.1.267", grok -> "grok-1.0.30-mac") rather than
+#     the agent's name. Walking the tree and matching `ps -o comm=` finds it.
+#   - visible screen: what is that agent doing? Every agent draws its state
+#     there, which is not true of the title: Claude's is a fixed session name
+#     while grok's carries a live spinner.
+#
+# Screen patterns and check order are per-agent. Claude's and Codex's come
+# from agenmux's agents/*.conf (which ports herdr's manifests), minus the
+# title rules those check first. They differ in more than wording: Claude
+# treats the interrupt hint as authoritative and checks working first, while
+# Codex checks its blocked prompts first.
+# Verified against claude 2.1.x and grok 1.0.30; codex is untested.
+
+echo $$ >/tmp/tmux-agent-status-poll.pid
+
+# Exit cleanly when killed: tmux reports any non-zero run-shell exit in the
+# status line, and a terminated daemon is routine, not an error worth showing.
+trap 'rm -f /tmp/tmux-agent-status-poll.pid; exit 0' EXIT HUP INT TERM
+
+# Echo the agent binary found anywhere in the pane's process tree, if any.
+pane_agent() {
+	root="$1"
+	pids="$root"
+	queue="$root"
+	while [ -n "$queue" ]; do
+		pid="${queue%% *}"
+		queue="${queue#"$pid"}"
+		queue="${queue# }"
+		children=$(pgrep -P "$pid" 2>/dev/null)
+		for c in $children; do
+			case " $pids " in
+			*" $c "*) ;;
+			*)
+				pids="$pids $c"
+				queue="$queue $c"
+				;;
+			esac
+		done
+	done
+	# shellcheck disable=SC2086
+	ps -o comm= -p $pids 2>/dev/null |
+		sed -nE 's|.*/||; /^(claude|claude-code|codex|grok|pingme)$/p' |
+		head -n 1
+}
+
+CLAUDE_WORKING='esc to interrupt|ctrl\+c to interrupt'
+CLAUDE_IDLE='^[[:space:]]*❯[[:space:]]*$'
+CLAUDE_BLOCKED='do you want to proceed\?|waiting for permission|do you want to allow this connection\?|enter to select.*esc to cancel|esc to cancel.*enter to select'
+
+CODEX_WORKING='esc to interrupt'
+CODEX_BLOCKED='press enter to confirm or esc to cancel|enter to submit answer|enter to submit all|allow command\?|\[y/n\]|yes \(y\)'
+
+# From observing grok 1.0.30. herdr has a grok manifest but targets Build
+# 0.2.101, whose footer differs (Ctrl+.:shortcuts vs Ctrl+x:shortcuts here).
+# The activity line's "[stop]" affordance is the only marker present for a
+# whole turn: the spinner text stops updating while a long tool call runs,
+# and the cancel hint moves between Esc and Ctrl+c depending on focus.
+# ponytail: Ctrl+c:cancel also appears in permission footers, where herdr
+# treats it as a blocked signal -- safe only because BLOCKED is checked
+# first; a permission footer those patterns miss would read as working.
+GROK_WORKING='\[stop\]|Ctrl\+c:cancel'
+GROK_BLOCKED='^[[:space:]]*[0-9]+/[0-9]+:select|Allow .*\?[[:space:]]*$|No, reject|Tab:scrollback|Shift\+x:dismiss|Ctrl\+o:yolo'
+
+classify() {
+	agent="$1"
+	screen="$2"
+	case "$agent" in
+	codex)
+		# Blocked first, as in agenmux. Untested against a live codex session:
+		# the patterns are its screen rules, minus the title checks that come
+		# first upstream and are useless here.
+		if printf '%s' "$screen" | grep -qiE "$CODEX_BLOCKED"; then
+			echo action
+		elif printf '%s' "$screen" | grep -qE "$CODEX_WORKING"; then
+			echo working
+		else
+			echo idle
+		fi
+		;;
+	grok)
+		# Blocked first: an approval prompt keeps the spinner and [stop]
+		# indicator from the tool call that raised it, so working would win.
+		if printf '%s' "$screen" | grep -qiE "$GROK_BLOCKED"; then
+			echo action
+		elif printf '%s' "$screen" | grep -qE "$GROK_WORKING"; then
+			echo working
+		else
+			echo idle
+		fi
+		;;
+	claude | claude-code | pingme)
+		# Working beats blocked (the interrupt hint is authoritative), and a
+		# bare ❯ prompt means idle -- checked before blocked so an answered
+		# permission prompt still on screen doesn't read as waiting.
+		if printf '%s' "$screen" | grep -qE "$CLAUDE_WORKING"; then
+			echo working
+		elif printf '%s' "$screen" | grep -qE "$CLAUDE_IDLE"; then
+			echo idle
+		elif printf '%s' "$screen" | grep -qiE "$CLAUDE_BLOCKED"; then
+			echo action
+		else
+			echo idle
+		fi
+		;;
+	*)
+		echo idle
+		;;
+	esac
+}
+
+while true; do
+	for pane in $(tmux list-panes -a -F '#{pane_id}:#{pane_pid}' 2>/dev/null); do
+		pane_id="${pane%%:*}"
+		pane_pid="${pane##*:}"
+
+		agent=$(pane_agent "$pane_pid")
+		if [ -z "$agent" ]; then
+			tmux set-option -p -t "$pane_id" @agent-state '' 2>/dev/null
+			continue
+		fi
+
+		screen=$(tmux capture-pane -p -t "$pane_id" 2>/dev/null | tail -20)
+		state=$(classify "$agent" "$screen")
+
+		tmux set-option -p -t "$pane_id" @agent-state "$state" 2>/dev/null
+	done
+	sleep 1
+done
+```
+
+
+### The tmux config {#the-tmux-config}
+
+`~/.config/tmux/tmux.conf` in full, so the status-line pieces are visible in
+the context they run in. The agent-status block is the middle section; the
+rest is ordinary setup that happens to surround it.
+
+```text
+###############################################################################
+# Tmux display settings
+###############################################################################
+set -g default-terminal "screen-256color"
+
+set -g base-index 1           # start windows numbering at 1
+setw -g pane-base-index 1     # make pane numbering consistent with windows
+
+set -g renumber-windows on    # renumber windows when a window is closed
+set -g set-titles on          # set terminal title
+set -g display-panes-time 800 # slightly longer pane indicators display time
+set -g display-time 1000      # slightly longer status messages display time
+set -g status-interval 1      # redraw status line every second
+
+# Set status bar background to light grey and foreground to a contrasting color
+set -g status-bg colour252 # light grey
+set -g status-fg colour18  # dark blue
+
+# Customize the left side of the status bar
+set -g status-left '#[bg=colour252,fg=colour18] #S #[bg=colour252,fg=colour18]'
+
+# Customize the right side of the status bar
+set -g status-right '#[bg=colour252,fg=colour18] %m-%d %H:%M #[bg=colour252,fg=colour18]'
+
+# Customize the window status format
+set-window-option -g window-status-current-style 'bg=colour18,fg=colour252'
+
+# Agent state is written by a background poller (agent-status-poll.sh) into
+# each pane's @agent-state option, not looked up here at render time --
+# process-tree checks via #() only get re-run when a client redraws, so a
+# detached/unwatched session would show stale or blank icons.
+set -g @agent-status \
+'#{?#{==:#{@agent-state},action},#[fg=colour196]#[bold]!,'\
+'#{?#{==:#{@agent-state},working},#[fg=colour220]●,'\
+'#{?#{==:#{@agent-state},idle},#[fg=colour34]✓,}}}'
+set-window-option -g window-status-format '#{E:@agent-status}#[fg=colour18]#[nobold]#I:#W#F '
+set-window-option -g window-status-current-format '#{E:@agent-status}#[fg=colour252]#[nobold]#I:#W#[fg=colour196]#[bold]* '
+
+# Start the poller once per server. PID-file guarded so `tmux source-file`
+# reloads don't spawn duplicates -- `pgrep -f` alone false-positives when a
+# wrapper shell's argv happens to contain the script name.
+if-shell '! kill -0 "$(cat /tmp/tmux-agent-status-poll.pid 2>/dev/null)" 2>/dev/null' \
+  'run-shell -b "~/.config/tmux/agent-status-poll.sh"'
+
+###############################################################################
+# Tmux bindings
+###############################################################################
+
+# Reload tmux config
+bind r source-file ~/.config/tmux/tmux.conf \; display "Reloaded ~/.config/tmux/tmux.conf!"
+
+# Set new panes to open in current directory
+bind c new-window -c "#{pane_current_path}"
+bind '"' split-window -c "#{pane_current_path}"
+bind % split-window -h -c "#{pane_current_path}"
+
+# mouse on
+setw -g mouse on
+
+# set vi mode for copy mode
+setw -g mode-keys vi
+
+## Clipboard integration
+set -s set-clipboard external
+bind Escape copy-mode
+bind p paste-buffer
+bind -T copy-mode-vi v send -X begin-selection
+bind -T copy-mode-vi y send-keys -X copy-selection-and-cancel
+bind -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-selection-and-cancel
+bind -T copy-mode-vi Enter send-keys -X copy-selection-and-cancel
+
+## hjkl pane traversal
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+
+## move window right / left
+bind-key -n C-S-Left swap-window -t -1 \; select-window -t -1
+bind-key -n C-S-Right swap-window -t +1 \; select-window -t +1
+```
+
+Both files live in the same directory, which is what lets the `if-shell`
+line reference the script by a fixed path. Stowed as one package, they land
+at `~/.config/tmux/` together.
