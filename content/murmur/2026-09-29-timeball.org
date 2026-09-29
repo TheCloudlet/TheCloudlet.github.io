@@ -1,0 +1,179 @@
+#+TITLE: Who Keeps the Time? Perth Observatory, and a Lawn on Gongyuan Road
+#+DESCRIPTION: A stargazing tour at Perth Observatory, why ships needed accurate time, and the Taipei observatory where my parents worked.
+#+AUTHOR: Yi-Ping Pan (Cloudlet)
+#+DATE: 2026-09-29
+#+ZOLA_DRAFT: false
+#+ZOLA_CATEGORIES: murmur
+#+ZOLA_TAGS: traveling thinking australia perth taipei
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t))
+#+ZOLA_SECTION: murmur
+
+* A question in the dark
+
+I went to Perth in early August with my wife and my sister. One night we joined
+a stargazing tour at Perth Observatory.
+
+(Side note: I really like how Australian tourism handles history. They write it
+down clearly and make sure visitors actually learn it. Not a plaque I walk past,
+but a story someone tells me out loud.)
+
+Our guide explained why the observatory was built in the first place. It was the
+colonial era, and the colony needed one unified, accurate time. So they built an
+observatory and watched the stars.
+
+And I couldn't help asking: /why do we need accurate time?/
+
+@@md:{{ image(sources=["/images/2026-09-29-perth-observatory-clocks.webp"] alt="Two Victor Kullberg long-case clocks on display at Perth Observatory" caption="Two Victor Kullberg (London) long-case clocks on display at Perth Observatory") }}@@
+
+* The answer: latitude is easy, longitude needs a clock
+
+The answer is navigation. Back when ships crossed oceans, a ship needed to know
+where it was, and "where" comes in two parts:
+
+1. *Latitude.* A star is enough. Measure the angle between Polaris and the
+   horizon in the north, or the sun's height at noon anywhere, and that is the
+   latitude.
+2. *Longitude.* It needs /accurate time/. The Earth turns 15 degrees every hour,
+   so with the time back home and the time on board, the difference tells how
+   far east or west the ship has gone.
+
+(Another side note: the nautical mile is tied to this too. One nautical mile is
+one minute of latitude.[fn:1] I remember [[https://www.youtube.com/watch?v=IfdJS_ineu4][StarTalk covering this]] and finding it
+really cool.)
+
+Do the math and it is clear why a good clock was a matter of life and death. One
+minute of clock error is a quarter of a degree of longitude, which is about 15
+nautical miles at the equator. So every ship needed a clock that stayed accurate
+for months at sea.
+
+* But ship clocks were terrible
+
+A pendulum clock does not like a rolling ship. The solution was John Harrison's
+marine chronometer, built to be unaffected by the motion of the ship. In a 1764
+trial voyage to Barbados, his timekeeper passed the strictest requirements of
+the day.[fn:2]
+
+Even so, a chronometer drifts. Before leaving port, a captain wanted to check it
+against the "true" time. That is what a *[[https://en.wikipedia.org/wiki/Time_ball][time ball]]* was for.
+
+It works like this. A big ball sits on a pole near the harbor. A few minutes
+before the hour it rises to the top. At a fixed hour, often 1 pm, it drops. Ship
+captains watch it through a telescope and correct their chronometers. The first
+one was built at Portsmouth in 1829, and Greenwich had its own by 1833.[fn:3]
+
+* Wait, stars at night, but the ball drops in the day?
+
+I got confused here. Stars come out at night, but the ball drops in the middle
+of the day. How do those fit together?
+
+As I understand it, the answer is the clock in the middle:
+
+1. A mechanical clock drifts a little every day, so an observatory builds a very
+   stable one.
+2. At night, astronomers watch stars cross the meridian, the north-south line
+   overhead. That gives them a very accurate reference.
+3. They compare it to the clock and work out /how much the clock is off/.
+   Usually they don't reset it. They write down the error and correct for it.
+4. In the daytime, the same clock triggers the ball at the set hour.
+
+So: /at night we use the stars to calibrate the clock, and in the daytime we use
+the clock to tell the whole city the time./
+
+Perth's observatory, by the way, was built for exactly this. It opened in 1900
+to keep standard time for Western Australia (and to collect weather data).
+According to [[https://en.wikipedia.org/wiki/Perth_Observatory][Wikipedia]], before the first government astronomer arrived, clocks
+in the colony could differ by up to half an hour. And time was announced each
+day by a cannon, which is still on the grounds.
+
+* And then I looked closer to home
+
+After the trip I started to wonder: was there anything like this in Taiwan?
+
+There was. The Taipei Observatory at 64 Gongyuan Road did the same job.
+According to the [[https://www.cwa.gov.tw/V8/C/A/organ/ASTRO.html][Central Weather Administration]]:
+
+- 1896: it started measuring the sun's altitude with sextants to set the time
+- 1909: a red time ball, one meter across, was installed and dropped at noon
+- 1913: an astronomical observation room with a meridian circle and telescopes
+  was completed
+- December 1945: after the war, it resumed time calibration
+
+@@md:{{
+image(sources=["/images/2026-09-29-taipei-observatory-colonial-era.webp"]
+alt="Taipei Observatory at 64 Gongyuan Road during the Japanese colonial era"
+caption="Taipei Observatory (臺北測候所) during the Japanese colonial era.
+Source: National Taiwan University Library.") }}@@
+
+From what I can find, the way Taiwan got its time went from time ball, to noon
+cannon, to telegraph, to radio. Each step was really the same problem: how do we
+keep everyone in sync?
+
+Here is the part that is hard to believe. That place is now the Central Weather
+Administration, formerly the Central Weather Bureau, where my parents worked
+their whole careers. My dad studied meteorology and my mom was an IT engineer
+the whole career in exact same place.
+
+I used to go there as a kid.
+
+* The sound of an old machine room
+
+Next door on Gongyuan Road is a teachers' college (now the University of Taipei,
+I think). In the summers I took swimming lessons there. In the afternoons I
+would go to my mom's office and do my own thing.
+
+What I remember most is the sound. The hum of old cooling fans. A whole room of
+hard drives reading and writing. Lots and lots of beeps.
+
+Maybe that is why I ended up good at science and computers. Maybe. I can't prove
+it.
+
+* The observatory that almost disappeared
+
+Back in Perth, there was one more thing I learned that night. The observatory
+lost its government funding. As I understand it:
+
+- 2013: research programs were cut
+- March 2015: all but one staff member were made redundant[fn:4]
+- July 2015: volunteers took over running it[fn:5]
+
+About 80 volunteers went through months of training to reopen the place.[fn:4]
+Today there are around 180, working something like 25,000 hours a year,
+alongside a small paid staff. Money comes from tours, events, merchandise and
+donations.[fn:5]
+
+Our guide was one of those volunteers. And at the telescopes, many of the people
+teaching us were researchers.
+
+* Infrastructure is invisible until it isn't
+
+So here is what I keep thinking about.
+
+The time ball was infrastructure for time. My dad's work was infrastructure for
+weather. My mom's machine room was infrastructure for the systems around it. And
+today I work on a compiler, which is infrastructure for running AI.
+
+Good infrastructure is invisible. Nobody looks at the harbor and says "thank
+you, time ball." Nobody thanks the weather system for a forecast. And when it is
+invisible, it is easy to cut. Perth's observatory nearly went away. What saved
+it was people who cared enough to show up.
+
+I told my dad about all this. He didn't react much. Maybe he doesn't care.
+
+But I think I understand that quiet a little better now. It is the sound of a
+fan in a machine room, doing its job so everything else can.
+
+-----
+
+#+HTML: <br>
+
+**Footnotes**
+
+[fn:1] NOAA, [[https://oceanservice.noaa.gov/facts/nautical-mile-knot.html][What is the difference between a nautical mile and a knot?]]. Defines one nautical mile as one minute of latitude, chosen because marine charts already work in latitude and longitude.
+
+[fn:2] Royal Museums Greenwich, [[https://www.rmg.co.uk/stories/time/harrisons-clocks-longitude-problem][Longitude found: the story of Harrison's timekeepers]]. Harrison's H4 sailed to Barbados in March 1764; the trial confirmed it had kept time "within the most stringent limits of the 1714 Act."
+
+[fn:3] South Street Seaport Museum, [[https://southstreetseaportmuseum.org/time-balls/][Time Balls]]. Covers Captain Robert Wauchope's 1829 time ball at Portsmouth and the Royal Observatory's own at Greenwich in 1833, which still operates.
+
+[fn:4] ABC News, [[https://www.abc.net.au/news/2015-09-25/perth-observatory-revives-with-volunteer-astronomers/6806406][Perth Observatory reopens with volunteer astronomers]] (25 September 2015). Reports the 2013 cuts to research programs, the March 2015 redundancies, and the roughly 80 volunteers who trained for months before the reopening.
+
+[fn:5] Perth Observatory, [[https://perthobservatory.com.au/about/about-us][About the Observatory and its Volunteers]]. Volunteers have run the observatory for the Western Australian Government since 1 July 2015; today it has 7 staff and 180 volunteers contributing over 25,000 hours a year.
