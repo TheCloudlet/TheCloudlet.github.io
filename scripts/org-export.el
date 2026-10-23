@@ -1,7 +1,7 @@
-;; org-export.el — batch export all .org files to .md via ox-zola
+;; org-export.el — batch export all .org files to .md via ox-zola -*- lexical-binding: t; -*-
 ;; Usage: emacs --batch --load scripts/org-export.el
 
-(let ((straight-build (expand-file-name "~/.config/emacs/.local/straight/build-30.2")))
+(let ((straight-build (expand-file-name (format "~/.config/emacs/.local/straight/build-%s" emacs-version))))
   (dolist (dir (directory-files straight-build t "^[^.]"))
     (when (file-directory-p dir)
       (add-to-list 'load-path dir))))
@@ -18,11 +18,11 @@
 Ensures that maps (tables) are at the end of the alist."
   (let ((result (copy-alist data)))
     ;; Rename lastmod → updated
-    (when-let ((lastmod (alist-get 'lastmod result)))
+    (when-let* ((lastmod (alist-get 'lastmod result)))
       (setf (alist-get 'updated result) lastmod)
       (setq result (assq-delete-all 'lastmod result)))
     ;; Rename layout → template
-    (when-let ((layout (alist-get 'layout result)))
+    (when-let* ((layout (alist-get 'layout result)))
       (setf (alist-get 'template result) layout)
       (setq result (assq-delete-all 'layout result)))
     ;; Remove Hugo-specific fields not used by Zola
@@ -44,7 +44,7 @@ Ensures that maps (tables) are at the end of the alist."
           ;; Add taxonomies to the end
           (setq result (append result (list (cons 'taxonomies taxonomies)))))))
     ;; Ensure 'extra is at the end
-    (when-let ((extra (alist-get 'extra result)))
+    (when-let* ((extra (alist-get 'extra result)))
       (setq result (assq-delete-all 'extra result))
       (setq result (append result (list (cons 'extra extra)))))
     result))
