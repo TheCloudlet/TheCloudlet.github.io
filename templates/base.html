@@ -139,6 +139,33 @@
     <hr />
     {%- endif %}
     <div class="c">
+      {%- if config.extra.mail %}
+      {#- The address stays base64 in the HTML; the script below writes it out. #}
+      <div id="contact" class="contact">
+        <p>Questions, ideas, or a better way?</p>
+        <p class="contact-row">
+          <a class="js m-protected contact-mail" href="#{{ config.extra.mail | base64_encode }}" data-mail="{{ config.extra.mail | base64_encode }}">Email me</a>
+          <button type="button" class="contact-copy" hidden>Copy address</button>
+        </p>
+      </div>
+      <script>
+        (function () {
+          var link = document.querySelector(".contact-mail");
+          var copy = document.querySelector(".contact-copy");
+          // Read data-mail, not href: email.js rewrites href to mailto:.
+          var addr = atob(link.getAttribute("data-mail"));
+          link.textContent = addr;
+          // A mailto link opens nothing without a mail client, so offer copy.
+          if (!navigator.clipboard) return;
+          copy.hidden = false;
+          copy.addEventListener("click", function () {
+            navigator.clipboard.writeText(addr).then(function () {
+              copy.textContent = "Address copied";
+            });
+          });
+        })();
+      </script>
+      {%- endif %}
       {%- include "partials/social.html" %}
 
 

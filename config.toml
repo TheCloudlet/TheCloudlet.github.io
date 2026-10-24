@@ -61,6 +61,7 @@ footer_credit = false
 
 github = "TheCloudlet"
 linkedin = "yipingpan"
+mail = "pan.yiping.fi@gmail.com" # footer #contact block; base64 in the HTML, decoded by JS
 
 # I have commented out your giscus settings as Abridge does not support it out of the box.
 # You may need to add custom templates to support it.
