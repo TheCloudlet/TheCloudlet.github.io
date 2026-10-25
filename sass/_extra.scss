@@ -16,24 +16,8 @@
   --layout-gap: 2rem;
   --page-shell-width: calc(var(--reading-column-width) + var(--toc-rail-width) + var(--layout-gap));
 
-  // -- GitHub Dark Syntax Highlighting --
-  // We use !important or high specificity to override Abridge's mode-based settings
+  // -- Inline code colors --
   --rosewater: #ffa657;
-  --flamingo: #ff7b72;
-  --pink: #ff7b72;
-  --mauve: #d2a8ff;
-  --red: #ff7b72;
-  --maroon: #ff7b72;
-  --peach: #ffa657;
-  --yellow: #e3b341;
-  --green: #7ee787;
-  --teal: #a5d6ff;
-  --sky: #79c0ff;
-  --blue: #79c0ff;
-  --lavender: #d2a8ff;
-  --text: #c9d1d9;
-  --overlay0: #8b949e;
-  --codeblock-bg: #0d1117;
   --codeblock-highlight: #161b22;
 }
 
@@ -277,8 +261,6 @@ h1 {
 
 // Code Blocks (Pre) Refinements
 pre {
-  background-color: #2e3440 !important; // Nord Polar Night background
-  color: #d8dee9 !important;          // Nord snow storm foreground
   font-family: var(--code-font) !important;
   font-size: 0.85rem !important; // Reduced from 0.95rem for better balance
   line-height: 1.5 !important;
