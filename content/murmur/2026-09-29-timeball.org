@@ -23,7 +23,7 @@ observatory and watched the stars.
 
 And I couldn't help asking: /why do we need accurate time?/
 
-@@md:{{ image(sources=["/images/2026-09-29-perth-observatory-clocks.webp"] alt="Two Victor Kullberg long-case clocks on display at Perth Observatory" caption="Two Victor Kullberg (London) long-case clocks on display at Perth Observatory") }}@@
+@@md:{{<image sources={["/images/2026-09-29-perth-observatory-clocks.webp"]} alt="Two Victor Kullberg long-case clocks on display at Perth Observatory" caption="Two Victor Kullberg (London) long-case clocks on display at Perth Observatory" page={page} config={config} />}}@@
 
 * The answer: latitude is easy, longitude needs a clock
 
@@ -98,11 +98,7 @@ According to the [[https://www.cwa.gov.tw/V8/C/A/organ/ASTRO.html][Central Weath
   was completed
 - December 1945: after the war, it resumed time calibration
 
-@@md:{{
-image(sources=["/images/2026-09-29-taipei-observatory-colonial-era.webp"]
-alt="Taipei Observatory at 64 Gongyuan Road during the Japanese colonial era"
-caption="Taipei Observatory (臺北測候所) during the Japanese colonial era.
-Source: National Taiwan University Library.") }}@@
+@@md:{{<image sources={["/images/2026-09-29-taipei-observatory-colonial-era.webp"]} alt="Taipei Observatory at 64 Gongyuan Road during the Japanese colonial era" caption="Taipei Observatory (臺北測候所) during the Japanese colonial era. Source: National Taiwan University Library." page={page} config={config} />}}@@
 
 From what I can find, the way Taiwan got its time went from time ball, to noon
 cannon, to telegraph, to radio. Each step was really the same problem: how do we

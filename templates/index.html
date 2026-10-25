@@ -7,16 +7,14 @@
   {% set technical = get_section(path="technical/_index.md") %}
   {% set murmur = get_section(path="murmur/_index.md") %}
 
-  {% set all_pages = technical.pages
-    | concat(with=murmur.pages)
-    | filter(attribute="draft", value=false)
+  {% set all_pages = [p for p in [...technical.pages, ...murmur.pages] if not p.draft]
     | sort(attribute="date")
     | reverse
   %}
 
   <div class="timeline">
     {% set grouped = all_pages | group_by(attribute="year") %}
-    {% for year in all_pages | map(attribute="year") | unique %}
+    {% for year in [p.year for p in all_pages] | unique %}
       <div class="timeline-year">{{ year }}</div>
       {% for page in grouped[year] | sort(attribute="date") | reverse %}
         <div class="timeline-item">

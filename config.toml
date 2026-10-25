@@ -5,6 +5,9 @@ author = "Yi-Ping Pan (Cloudlet)"
 theme = "abridge"
 compile_sass = true
 build_search_index = true
+# zola 0.23 renders content as Tera. Technical posts show `{{ }}` in code
+# blocks (MLIR, templates) and use no components, so leave them as plain text.
+skip_content_templating = ["technical/**"]
 generate_feeds = true
 feed_filenames = ["atom.xml"]
 
