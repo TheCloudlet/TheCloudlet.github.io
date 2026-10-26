@@ -8,7 +8,7 @@
 #+ZOLA_CATEGORIES: hardware-architecture
 #+ZOLA_TAGS: 3d-rendering gpu opengl vulkan rasterization linear-algebra pixels-to-tensors
 
-#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (toc . t))
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t) (toc . t))
 
 [[file:part-1-2d-rendering.org][Part 1]] describes how 2D graphics works. In summary, it can be reduced to two operations, rasterize and composite. Now I am curious about how 3D graphics works, and want to gradually work toward AI computation.
 

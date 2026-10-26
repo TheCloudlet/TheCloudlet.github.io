@@ -10,6 +10,7 @@ draft = false
   categories = ["machine-learning"]
 [extra]
   math = true
+  math_auto_render = true
   toc = true
 +++
 

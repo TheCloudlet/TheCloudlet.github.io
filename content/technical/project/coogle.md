@@ -10,6 +10,7 @@ draft = false
   categories = ["software-tooling"]
 [extra]
   math = true
+  math_auto_render = true
 +++
 
 ## Why I Started This Project? {#why-i-started-this-project}

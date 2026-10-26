@@ -8,7 +8,7 @@
 #+ZOLA_CATEGORIES: emacs compiler
 #+ZOLA_TAGS: emacs llvm mlir tablegen tree-sitter clang-format onnx netron
 
-#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (toc . t))
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t) (toc . t))
 
 * Intro
 

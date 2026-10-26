@@ -8,7 +8,7 @@
 #+ZOLA_CATEGORIES: hardware-architecture
 #+ZOLA_TAGS: 2d-rendering nes-ppu font-rasterization linux-drm x11 pixels-to-tensors
 
-#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (toc . t))
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t) (toc . t))
 
 I started this series because I wanted to understand how ML compiler stacks built on MLIR actually work — not just the API surface, but why they are shaped the way they are. The trail goes back to GPU architecture, to the 3D pipeline, to the fixed-function hardware that preceded it.
 

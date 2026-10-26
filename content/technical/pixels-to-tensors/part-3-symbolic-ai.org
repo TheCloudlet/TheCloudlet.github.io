@@ -7,7 +7,7 @@
 #+ZOLA_CATEGORIES: machine-learning
 #+ZOLA_TAGS: symbolic-ai gofai expert-systems forward-chaining lisp mlir pixels-to-tensors
 #+ZOLA_ALIASES: /technical/pixels-to-tensors/part-3-symoblic-ai/
-#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (toc . t))
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t) (toc . t))
 
 * Intro
 

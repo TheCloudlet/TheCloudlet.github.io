@@ -27,7 +27,9 @@ contains_math() {
     ' "$1"
 }
 
-log "Checking for math blocks without 'math = true' flag..."
+# abridge (zola 0.23) renders raw $...$, \(...\) and $$...$$ only with
+# math_auto_render; math = true alone loads KaTeX but leaves the source as text.
+log "Checking for math blocks without 'math = true' and 'math_auto_render = true'..."
 
 # Find .md files with math delimiters
 for md in $(find "$CONTENT_DIR" -name "*.md" | sort); do
@@ -36,6 +38,8 @@ for md in $(find "$CONTENT_DIR" -name "*.md" | sort); do
     if contains_math "$md"; then
         if ! grep -q "math = true" "$md"; then
             err "$md — contains math but missing 'math = true' in [extra]"
+        elif ! grep -q "math_auto_render = true" "$md"; then
+            err "$md — contains math but missing 'math_auto_render = true' in [extra]"
         else
             ok "$md"
         fi
@@ -46,8 +50,10 @@ log "Checking .org files for math but missing frontmatter..."
 
 for org in $(find "$CONTENT_DIR" -name "*.org" | sort); do
     if contains_math "$org"; then
-        if ! grep -q "math . t" "$org"; then
+        if ! grep -q "(math . t)" "$org"; then
             err "$org — contains math but missing ':extra '((math . t)...)'"
+        elif ! grep -q "math_auto_render . t" "$org"; then
+            err "$org — contains math but missing '(math_auto_render . t)' in :extra"
         else
             ok "$org"
         fi

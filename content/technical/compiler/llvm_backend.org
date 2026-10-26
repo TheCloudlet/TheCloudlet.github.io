@@ -6,7 +6,7 @@
 #+ZOLA_CATEGORIES: compiler-design
 #+ZOLA_TAGS: instruction-selection register-allocation instruction-scheduling risc-v
 #+ZOLA_SECTION: technical/compiler
-#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t))
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t))
 
 * [WIP] RISC-V Compiler Backend Complete Reference
 

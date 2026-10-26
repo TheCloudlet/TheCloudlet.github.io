@@ -6,7 +6,7 @@
 #+ZOLA_CATEGORIES: software-tooling
 #+ZOLA_TAGS: ast-parsing libclang string-interning type-canonicalization
 #+ZOLA_SECTION: technical/project
-#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t))
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t))
 
 * Why I Started This Project?
 

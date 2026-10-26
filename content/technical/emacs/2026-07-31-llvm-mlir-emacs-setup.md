@@ -9,6 +9,7 @@ draft = false
   categories = ["emacs", "compiler"]
 [extra]
   math = true
+  math_auto_render = true
   toc = true
 +++
 

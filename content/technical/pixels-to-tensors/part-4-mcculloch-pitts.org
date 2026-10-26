@@ -6,7 +6,7 @@
 #+ZOLA_SECTION: technical/pixels-to-tensors
 #+ZOLA_CATEGORIES: machine-learning
 #+ZOLA_TAGS: connectionism mcculloch-pitts threshold-logic neural-networks pixels-to-tensors
-#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (toc . t))
+#+ZOLA_CUSTOM_FRONT_MATTER: :extra '((math . t) (math_auto_render . t) (toc . t))
 
 * Intro
 
