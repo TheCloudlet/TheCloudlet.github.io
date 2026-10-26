@@ -137,7 +137,13 @@
   //$findFont-Main: null,         // ← PREPEND custom MAIN font(s)
   //$findFont-Code: null,         // ← PREPEND custom CODE font(s)
   /// These lines specify the fonts to add.
-  $fontExt-Main: ("IBM Plex Sans", "Source Serif", Georgia, serif),
+  $fontExt-Main: ("IBM Plex Sans"),
+  // Lapis ink, matching the site mark. Links carry the only accent color, so
+  // every other element stays neutral (see _extra.scss for the type scale).
+  $f1: #1b1f24, $f2: #1b1f24, $c1: #ffffff, $c2: #f3f6fa, $c3: #dfe3e8,
+  $a1: #1A4A8A, $a2: #123a6e, $a3: #1A4A8A, $a4: #1A4A8A,
+  $f1d: #dde2e8, $f2d: #eef1f4, $c1d: #111418, $c2d: #181d24, $c3d: #2b3139,
+  $a1d: #8ab8ff, $a2d: #b0cfff, $a3d: #8ab8ff, $a4d: #8ab8ff,
   // MAIN font(s) to add
   $fontExt-Code: null,
   // CODE font(s) to add

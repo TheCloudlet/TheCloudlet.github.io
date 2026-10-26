@@ -47,11 +47,14 @@ toc = true
 recent = false
 google_analytics = "G-7FD091QMK9"
 
+# Header brand: the mark plus the author's name, so the first thing a reader
+# sees is who writes here.
+logo = { file = "favicon.svg", text = "Yi-Ping Pan (Cloudlet)", width = "22", height = "22", alt = "" }
+
 menu = [
-    { name = "all-posts", url = "/", slash = false },
-    { name = "technical", url = "technical", slash = true },
-    { name = "murmur", url = "murmur", slash = true },
-    { name = "about", url = "about", slash = true },
+    { name = "Writing", url = "technical", slash = true },
+    { name = "Murmur", url = "murmur", slash = true },
+    { name = "About", url = "about", slash = true },
 ]
 
 menu_footer = [
@@ -60,6 +63,15 @@ menu_footer = [
 ]
 
 copyright_override = "&copy; 2025-$CURRENT_YEAR $SITE_TITLE"
+
+# Series shown on the home page and in each part's left rail. A series is a
+# section's pages, optionally narrowed to titles that start with `prefix`.
+# `slug` names the series in ids such as emacs-internal/02.
+series_list = [
+    { name = "Emacs Internal", slug = "emacs-internal", section = "technical/emacs/_index.md", prefix = "Emacs Internal", note = "reached the Hacker News front page" },
+    { name = "Refactoring with AI", slug = "refactor-with-ai", section = "technical/refactor-with-ai/_index.md", prefix = "", note = "" },
+    { name = "From Pixels to Tensors", slug = "pixels-to-tensors", section = "technical/pixels-to-tensors/_index.md", prefix = "", note = "" },
+]
 footer_credit = false
 
 github = "TheCloudlet"

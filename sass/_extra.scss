@@ -5,124 +5,181 @@
 @use "plex.scss";
 
 // =============================================================================
-// 1. CSS Variables & Theme Overrides (Ported from Tabi customization)
+// 1. Tokens
+//
+// Reading measure: the text column is 32 times the body size, about 70
+// characters per line of IBM Plex Sans (measured 66-74), inside the 45-75
+// range Bringhurst recommends. The body size grows on wide screens, so the
+// column grows with it instead of the line getting longer. Images, math,
+// tables and long code may use the wider column beside the text.
+// Colors come from abridge's --f1/--c1/--a1 set in abridge.scss; --muted mixes
+// them so it switches with the theme and stays above 4.5:1 in both modes.
 // =============================================================================
 
 :root {
-  // -- Fonts --
+  --serif: "Source Serif 4", Georgia, serif;
+  --mono-ui: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --code-font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --reading-column-width: 80ch;
-  --toc-rail-width: 15rem;
-  --layout-gap: 2rem;
-  --page-shell-width: calc(var(--reading-column-width) + var(--toc-rail-width) + var(--layout-gap));
-
-  // -- Inline code colors --
-  --rosewater: #ffa657;
-  --codeblock-highlight: #161b22;
+  --muted: color-mix(in srgb, var(--f1) 68%, var(--c1));
+  --body-size: clamp(1.125rem, 0.78rem + 0.42vw, 1.4rem);
+  --reading-column-width: calc(var(--body-size) * 32);
+  --wide-column-width: 52rem;
+  --toc-rail-width: 14rem;
+  --layout-gap: 3.5rem;
+  --page-shell-width: calc(var(--wide-column-width) + var(--toc-rail-width) + var(--layout-gap));
 }
 
-// 2. Code Block Stylings
+// =============================================================================
+// 2. Header: mark + name on the left, three quiet links on the right.
 // =============================================================================
 
-// Inline code styling
-:not(pre) > code {
-  background-color: var(--codeblock-highlight) !important; // using our variable
-  color: var(--rosewater) !important; // High contrast text for inline code
-  padding: 0.15em 0.4em;
-  border-radius: 4px;
-  font-size: 0.85rem !important; // Changed from .95em to rem to prevent scaling
+body > header {
+  border-bottom: 1px solid var(--c3);
+  margin-bottom: 2.75rem;
+  padding-bottom: 0.9rem;
+}
+
+.site-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-decoration: none;
+
+  img {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+#searchbox .searchd {
+  background: none;
+  border-bottom: 1px solid var(--c3);
+  border-radius: 0;
+}
+
+// Keep abridge's input size: a smaller font shrank it under the 24px
+// minimum touch target (Lighthouse target-size).
+#searchinput {
+  background: none;
+}
+
+body > header nav ul a {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.95rem;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--a1);
+  }
 }
 
 // =============================================================================
 // 3. Typography
 // =============================================================================
 
-// Use IBM Plex Sans for article body text
-article {
-  p,
-  li,
-  details,
-  summary {
-    font-family: system-ui, -apple-system, sans-serif;
-  }
-}
-
-// Make headers more distinct - use serif font, larger sizes, and color
 h1,
 h2,
 h3,
 h4,
 h5,
 h6 {
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-article h1,
-article h2 {
   text-wrap: balance;
 }
 
-.article-body a {
-  text-decoration: underline;
-  text-decoration-thickness: 0.08em;
-  text-underline-offset: 0.15em;
+// Page titles use the serif; everything a reader scans or clicks stays sans.
+article > h1,
+.section-head h1 {
+  font: 600 clamp(1.9rem, 1.2rem + 2.2vw, 2.5rem) / 1.16 var(--serif);
+  letter-spacing: -0.012em;
+  margin: 0.35rem 0 0.75rem;
 }
 
-article {
-  h1 {
-    font-size: 1.8rem; // Reduced from 2rem
-    font-weight: 700;
-    margin-top: 1.5em;
-    margin-bottom: 0.5em;
+.article-body {
+  font-size: var(--body-size);
+  line-height: 1.65;
+
+  // abridge sizes these in rem; keep them on the body size.
+  p,
+  li,
+  blockquote {
+    font-size: var(--body-size);
+  }
+
+  p,
+  li {
+    margin-top: 0;
+  }
+
+  p {
+    margin-bottom: 1.15em;
   }
 
   h2 {
-    font-size: 1.5rem;
-    font-weight: 650;
-    margin-top: 2em;
-    margin-bottom: 0.7em;
+    font-size: 1.45rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 2.2em 0 0.6em;
   }
 
   h3 {
-    font-size: 1.3rem;
-    font-weight: 650;
-    margin-top: 1.8em;
-    margin-bottom: 0.6em;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 1.9em 0 0.5em;
   }
 
   h4 {
-    font-size: 1.15rem; // Reduced from 1.25rem
+    font-size: 1.05rem;
     font-weight: 600;
-    margin-top: 1em;
-    margin-bottom: 0.2em;
+    margin: 1.4em 0 0.3em;
   }
 
-  // Normalize paragraph spacing to fix "Leading & Chunking" issues
-  p {
-    margin-top: 0;
-    margin-bottom: 1.25rem; // Consistent spacing
-    line-height: 1.7; // Slightly looser line height for readability
-  }
-
-  // Fix "Latest Post" titles on homepage being too huge
-  big {
-    font-size: 1.4rem !important;
-    font-weight: 700;
-    line-height: 1.3;
-    display: block; // Ensure it behaves like a header
-    margin-bottom: 0.5rem;
-
-    a {
-      text-decoration: none;
-    }
+  a {
+    text-decoration: underline;
+    text-decoration-thickness: 0.07em;
+    text-underline-offset: 0.18em;
   }
 }
 
+// Small uppercase labels: section names, "On this page", series names.
+.label {
+  font: 600 0.75rem/1 var(--mono-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.9rem;
+}
+
+// Post meta (date, tags) under the title.
+article > h1 + span,
+article > span {
+  display: block;
+  font: 0.82rem/1.6 var(--mono-ui);
+  color: var(--muted);
+  margin: 0 0 2.25rem;
+
+  a {
+    color: var(--muted);
+  }
+}
+
+// Inline code follows the theme instead of a fixed light chip.
+:not(pre) > code {
+  background-color: var(--c2) !important;
+  color: var(--f1) !important;
+  border: 1px solid var(--c3);
+  border-radius: 3px;
+  padding: 0.08em 0.35em;
+  font-family: var(--code-font);
+  font-size: 0.86em;
+}
+
 // =============================================================================
-// 4. Layout & TOC Refinements
+// 4. Article layout: series and contents rail on the left, text on the right.
 // =============================================================================
 
-// Keep site chrome and content on one shared frame.
 header,
 main,
 footer {
@@ -130,8 +187,30 @@ footer {
 }
 
 main > article {
-  flex: 0 1 var(--reading-column-width);
+  flex: 0 1 var(--wide-column-width);
+  max-width: var(--wide-column-width);
+  min-width: 0;
+}
+
+// Text stays on the reading column; figures, math and tables may use the
+// wide column. A code block is as wide as its longest line, between the two.
+main > article > :not(.article-body),
+.article-body > * {
   max-width: var(--reading-column-width);
+}
+
+.article-body > p:has(> img),
+.article-body > figure,
+.article-body > .katex-display,
+.article-body > p:has(> .katex-display),
+.article-body > table {
+  max-width: var(--wide-column-width);
+}
+
+.article-body > pre {
+  width: max-content;
+  min-width: min(100%, var(--reading-column-width));
+  max-width: min(100%, var(--wide-column-width));
 }
 
 main > :only-child {
@@ -139,50 +218,94 @@ main > :only-child {
   margin-inline: auto;
 }
 
-main > article > h1:first-child,
-.sblock > .blockdiv:first-child {
-  margin-top: 0;
-}
-
-// Desktop table of contents.
 .sblock {
   display: block !important;
+  order: -1;
   flex: 0 0 var(--toc-rail-width) !important;
   width: var(--toc-rail-width) !important;
   min-width: var(--toc-rail-width) !important;
   max-width: var(--toc-rail-width) !important;
-  margin-left: var(--layout-gap) !important;
+  margin: 0.4rem var(--layout-gap) 0 0 !important;
+  font-size: 0.9rem;
+  line-height: 1.45;
 
   @media screen and (max-width: 1100px) {
     display: none !important;
   }
+
+  .blockdiv {
+    background: none;
+    padding: 0;
+    border: 0;
+    margin-bottom: 2rem;
+  }
+
+  .sticky {
+    position: sticky;
+    top: 1.5rem;
+  }
+
+  a {
+    color: var(--muted);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--a1);
+    }
+  }
 }
 
-.mobile-toc {
-  display: none;
+.series-parts {
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+
+  .current {
+    color: var(--f1);
+    font-weight: 600;
+  }
+}
+
+// abridge lays out every <nav> and its lists as a centered row for the
+// header menu; table-of-contents navs and lists stay vertical and left-aligned.
+.sblock nav,
+.mobile-toc nav {
+  display: block;
+  margin: 0;
 }
 
 .toc-level-1,
 .toc-level-2 {
+  display: block;
   list-style: none;
   margin: 0;
   padding-left: 0;
-}
 
-.toc-level-1 {
-  margin-top: 0.5rem;
-}
+  li {
+    display: block;
+    padding: 0;
+  }
 
-.toc-level-2 {
-  padding-left: 1rem;
+  a {
+    display: block;
+  }
 }
 
 .toc-level-1 li {
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
 }
 
-.toc-level-1 a {
+.sblock nav a,
+.series-parts a {
   font-weight: 400;
+}
+
+.toc-level-2 {
+  margin-top: 0.35rem;
+  padding-left: 0.9rem;
+}
+
+.mobile-toc {
+  display: none;
 }
 
 @media screen and (max-width: 1100px) {
@@ -199,10 +322,11 @@ main > article > h1:first-child,
     border: 1px solid var(--c3);
     border-radius: 4px;
     background-color: var(--c2);
+    font-size: 0.95rem;
 
     summary {
       cursor: pointer;
-      font-weight: 650;
+      font-weight: 600;
     }
 
     &[open] summary {
@@ -211,52 +335,36 @@ main > article > h1:first-child,
       border-bottom: 1px solid var(--c3);
     }
 
-    nav {
-      margin-top: 0;
-    }
-
-    .toc-level-1 > li {
-      margin-bottom: 0.75rem;
-    }
-
-    .toc-level-1 > li:last-child {
-      margin-bottom: 0;
-    }
-
     .toc-level-1 > li > a {
       font-weight: 600;
     }
 
     .toc-level-2 {
-      margin-top: 0.35rem;
-      padding-left: 1rem;
       border-left: 1px solid var(--c3);
-    }
-
-    .toc-level-2 li {
-      margin-bottom: 0.3rem;
+      padding-left: 1rem;
     }
 
     a {
       line-height: 1.4;
+      text-decoration: none;
     }
   }
 }
 
-// Typography: Title Spacing
-h1 {
-  margin-bottom: 2.5rem !important;
-}
-
-// Inline Code: Refined Aesthetic
-:not(pre) > code {
-  background-color: #f3f4f6 !important; // Light Soft Gray (User Requested)
-  color: #c0392b !important; // Deep Red (User Requested)
+// "Next in series" card at the end of a part.
+.series-next {
+  margin: 2.5rem 0 0;
+  padding: 1rem 1.15rem;
+  background: var(--c2);
   border-radius: 4px;
-  padding: 0.1em 0.4em;
-  font-size: 0.9em;
-  font-family: var(--code-font);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.98rem;
+
+  span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-bottom: 0.15rem;
+  }
 }
 
 // Code Blocks (Pre) Refinements
@@ -326,27 +434,18 @@ pre[data-lang]::before {
 @media screen and (max-width: 1024px) {
   // Fix "Text too small" on mobile
   // Boosting body text size
-  article {
-    p,
-    li,
-    blockquote {
-      font-size: 1.05rem !important; // Slightly larger body text
-      line-height: 1.6;
-    }
+  :root {
+    --body-size: 1.0625rem;
   }
 
   // Fix "Code block super huge" on mobile - NUCLEAR OPTION
   // Target EVERY possible code block variation
   html body article pre,
   html body pre,
-  html body .z-code,
-  html body [class*="language-"],
   body article pre,
   body pre,
   article pre,
-  pre,
-  .z-code,
-  [class*="language-"] {
+  pre {
     font-size: 0.8rem !important; // Balanced for mobile readability
     line-height: 1.3 !important;
     padding: 1.8rem 0.5rem 0.5rem 0.5rem !important;
@@ -356,12 +455,8 @@ pre[data-lang]::before {
 
   // Explicitly target code and internal tables (which cause "big/small" inconsistencies)
   html body pre code,
-  html body .z-code code,
-  html body [class*="language-"] code,
   body pre code,
   pre code,
-  .z-code code,
-  [class*="language-"] code,
   pre table,
   pre table td,
   pre code table,
@@ -379,20 +474,213 @@ pre[data-lang]::before {
 }
 
 // =============================================================================
-// Post meta spacing
+// Home page: the author's own intro, one line per series, then one timeline
+// of every post. Ids such as emacs-internal/02 are set in monospace, the only
+// "code" styling on the page; everything else is ordinary reading type.
 // =============================================================================
 
-article > header + span,
-article > span {
-  display: block;
+.home {
+  max-width: var(--reading-column-width) !important;
+  margin-inline: auto;
+}
+
+.intro {
+  font-size: 1.125rem;
+  line-height: 1.65;
+  margin-bottom: 3rem;
+
+  p {
+    margin: 0 0 0.9em;
+  }
+}
+
+.ident {
+  font: 0.8rem/1.6 var(--mono-ui);
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+
+  a {
+    color: var(--a1);
+    text-decoration: none;
+  }
+}
+
+.ident-head {
+  font: 500 0.85rem/1 var(--mono-ui);
+  color: var(--muted);
+  margin: 2.75rem 0 1rem;
+}
+
+.series-parts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    align-items: baseline;
+    padding: 0.2rem 0;
+  }
+}
+
+.pid {
+  font: 0.8rem var(--mono-ui);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.post-list a .pid {
+  margin-right: 0.6rem;
+}
+
+// One timeline of every post on the home page: date, title, series id.
+.tl-year {
+  font: 500 0.85rem/1 var(--mono-ui);
+  color: var(--muted);
+  margin: 2rem 0 0.6rem;
+}
+
+.tl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: grid;
+    grid-template-columns: 3.6rem minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: baseline;
+    padding: 0.32rem 0;
+  }
+
+  .tl-id {
+    text-align: right;
+  }
+
+  time,
+  .tl-id {
+    font: 0.78rem var(--mono-ui);
+    color: var(--muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  a {
+    color: var(--f1);
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      color: var(--a1);
+    }
+  }
+
+  @media (max-width: 600px) {
+    li {
+      grid-template-columns: 3.4rem minmax(0, 1fr);
+      row-gap: 0.1rem;
+    }
+
+    .tl-id {
+      grid-column: 2;
+      text-align: left;
+    }
+  }
+}
+
+// Series entry points on the home page: one line per series.
+.series-strip {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2rem 0.8rem;
+    padding: 0.45rem 0;
+    border-top: 1px solid var(--c3);
+  }
+
+  .slug {
+    font: 500 0.92rem var(--mono-ui);
+    color: var(--a1);
+    text-decoration: none;
+  }
+
+  .what {
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  .ends {
+    margin-left: auto;
+    font-size: 0.88rem;
+  }
+}
+
+// Date + title rows, shared by the home page and section pages.
+.post-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: grid;
+    grid-template-columns: 6.4rem minmax(0, 1fr);
+    gap: 0.9rem;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--c3);
+  }
+
+  time {
+    font: 0.8rem/1.9 var(--mono-ui);
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  a {
+    color: var(--f1);
+    text-decoration: none;
+    font-size: 1.02rem;
+    font-weight: 500;
+    line-height: 1.4;
+
+    &:hover {
+      color: var(--a1);
+    }
+  }
+
+  .sub {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+
+  .desc {
+    display: block;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+}
+
+.section-head {
   margin-bottom: 2rem;
-  margin-top: 0.25rem;
-  opacity: 0.75;
-  font-size: 0.85rem;
+
+  p {
+    color: var(--muted);
+    margin: 0;
+  }
 }
 
 // =============================================================================
-// Timeline (homepage post list)
+// Timeline (technical, murmur and emacs section pages)
 // =============================================================================
 
 .timeline {
@@ -406,20 +694,17 @@ article > span {
     left: 5.5rem;
     top: 0;
     bottom: 0;
-    width: 2px;
+    width: 1px;
     background-color: var(--c3);
   }
 }
 
 .timeline-year {
   position: relative;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.7;
-  margin: 1.5rem 0 0.5rem -7rem;
-  padding-left: 0;
+  font: 600 0.75rem var(--mono-ui);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin: 1.75rem 0 0.5rem -7rem;
 }
 
 .timeline-item {
@@ -427,36 +712,36 @@ article > span {
   display: flex;
   align-items: baseline;
   gap: 0.75rem;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.55rem;
 }
 
 .timeline-date {
   position: absolute;
   left: -6.5rem;
-  font-size: 0.8rem;
-  opacity: 0.7;
+  font: 0.8rem var(--mono-ui);
+  color: var(--muted);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
 .timeline-dot {
   position: absolute;
-  left: -1.45rem;
-  top: 0.35em;
-  width: 7px;
-  height: 7px;
+  left: -1.6rem;
+  top: 0.5em;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background-color: var(--a1);
+  background-color: var(--muted);
   flex-shrink: 0;
 }
 
 .timeline-title {
-  font-size: 0.95rem;
+  font-size: 1rem;
   text-decoration: none;
-  color: var(--a1);
+  color: var(--f1);
 
   &:hover {
-    text-decoration: underline;
+    color: var(--a1);
   }
 }
 
@@ -485,7 +770,7 @@ article > span {
   }
 
   .timeline-dot {
-    left: -1.5rem;
+    left: -1.48rem;
   }
 
   .timeline-title {
@@ -494,17 +779,60 @@ article > span {
 }
 
 // =============================================================================
-// Share & Related (unified inline prompt style)
+// Related posts (standalone articles only)
 // =============================================================================
-.post-meta-line {
-  font-size: 0.85rem;
-  margin: 0.4rem 0;
-  opacity: 0.8;
+
+.related {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--c3);
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  li {
+    padding: 0.25rem 0;
+  }
 
   a {
-    color: var(--a1);
+    color: var(--f1);
     text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      color: var(--a1);
+    }
   }
+}
+
+// =============================================================================
+// Visited links in lists
+//
+// abridge colors every visited link (a:visited), which outranks a plain class
+// selector, so posts a reader had opened turned lapis while the rest stayed
+// ink. Lists keep one color whether visited or not; hover still shows the accent.
+// =============================================================================
+
+.timeline-title:visited,
+.tl-list a:visited,
+.post-list a:visited,
+.related a:visited {
+  color: var(--f1);
+}
+
+.sblock a:visited {
+  color: var(--muted);
+}
+
+.timeline-title:visited:hover,
+.tl-list a:visited:hover,
+.post-list a:visited:hover,
+.related a:visited:hover,
+.sblock a:visited:hover {
+  color: var(--a1);
 }
 
 // =============================================================================

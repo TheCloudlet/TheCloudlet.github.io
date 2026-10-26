@@ -1,0 +1,32 @@
+{#- One timeline of every post, newest first, grouped by year. Each row shows
+    the series id (emacs-internal/02) when the post belongs to a series, or
+    "murmur" for personal notes. -#}
+{#- Series parts: keep this filter identical in templates/index.html,
+    templates/page.html and templates/partials/home-timeline.html. Tera's
+    include cannot return values, so each template computes it. -#}
+{%- set_global sid_urls = [] %}
+{%- set_global sid_ids = [] %}
+{%- for s in config.extra.series_list or [] %}
+  {%- set sec = get_section(path=s.section) %}
+  {%- set parts = [p for p in sec.pages if not p.draft and (not s.prefix or p.title is starting_with(pat=s.prefix))] | sort(attribute="date") %}
+  {%- for p in parts %}
+    {%- set_global sid_urls = [...sid_urls, p.permalink] %}
+    {%- set_global sid_ids = [...sid_ids, s.slug ~ "/" ~ (("0" ~ loop.index) if loop.index < 10 else (loop.index | str))] %}
+  {%- endfor %}
+{%- endfor %}
+{%- set technical = get_section(path="technical/_index.md") %}
+{%- set murmur = get_section(path="murmur/_index.md") %}
+{%- set murmur_urls = [p.permalink for p in murmur.pages] %}
+{%- set all_pages = [p for p in [...technical.pages, ...murmur.pages] if not p.draft] | sort(attribute="date") | reverse %}
+<div class="tl">
+  {%- for year in [p.year for p in all_pages] | unique %}
+  <h2 class="tl-year">{{ year }}</h2>
+  <ul class="tl-list">
+    {%- for page in [p for p in all_pages if p.year == year] %}
+    {%- set_global row_id = "murmur" if page.permalink in murmur_urls else "" %}
+    {%- for u in sid_urls %}{% if u == page.permalink %}{% set_global row_id = sid_ids[loop.index0] %}{% endif %}{% endfor %}
+    <li><time datetime="{{ page.date }}">{{ page.date | date(format="%b %d") }}</time><a href="{{ page.permalink | safe }}">{{ page.title }}</a><span class="tl-id">{{ row_id }}</span></li>
+    {%- endfor %}
+  </ul>
+  {%- endfor %}
+</div>

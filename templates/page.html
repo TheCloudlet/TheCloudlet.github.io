@@ -36,8 +36,39 @@
     {%- set toc = page.toc %}
     {%- set show_toc = toc | length >= 3 %}
     {%- set toc_label %}{{<translate key="On_this_page" default="On this page" i18n={i18n} />}}{%- endset %}
+    {%- set is_about = page.relative_path == "about.md" %}
+
+    {#- Series: the config.extra.series_list entry whose pages include this one.
+        ser holds the parts oldest first; ser_idx is this page's position. -#}
+    {%- set_global ser = [] %}
+    {%- set_global ser_name = "" %}
+    {%- set_global ser_url = "" %}
+    {%- set_global ser_idx = 0 %}
+    {%- set_global ser_prefix = "" %}
+    {%- set_global ser_slug = "" %}
+    {#- Series parts: keep this filter identical in templates/index.html,
+        templates/page.html and templates/partials/home-timeline.html. Tera's
+        include cannot return values, so each template computes it. -#}
+    {%- for s in config.extra.series_list or [] %}
+      {%- set sec = get_section(path=s.section) %}
+      {%- set parts = [p for p in sec.pages if not p.draft and (not s.prefix or p.title is starting_with(pat=s.prefix))] | sort(attribute="date") %}
+      {%- for p in parts %}
+        {%- if p.permalink == page.permalink %}
+          {%- set_global ser = parts %}
+          {%- set_global ser_name = s.name %}
+          {%- set_global ser_url = sec.permalink %}
+          {%- set_global ser_idx = loop.index0 %}
+          {%- set_global ser_prefix = s.prefix %}
+          {%- set_global ser_slug = s.slug %}
+        {%- endif %}
+      {%- endfor %}
+    {%- endfor %}
     <article>
     {%- block page_header -%}
+    {%- if ser %}
+    {%- set n = ser_idx + 1 %}
+    <p class="ident"><a href="{{ ser_url | safe }}">{{ ser_slug }}/{{ ("0" ~ n) if n < 10 else n }}</a> · part {{ n }} of {{ ser | length }}</p>
+    {%- endif %}
     {{<title_post page={page}  config={config} />}}
 
     {%- if not page.extra.hide_meta and config.extra.meta_post?.position %}
@@ -46,7 +77,7 @@
     {%- endif %}{%- endif %}
     {%- endblock page_header %}
 
-    {%- if (config.extra.toc if config.extra.toc is defined else true) and show_toc %}
+    {%- if (config.extra.toc if config.extra.toc is defined else true) and show_toc and not is_about %}
     <details class="mobile-toc">
       <summary>{{ toc_label }}</summary>
       <nav aria-label="{{ toc_label }}">
@@ -55,112 +86,47 @@
     </details>
     {%- endif %}
 
-    {#- In Page Series Navigation #}
-    {%- if (config.extra.series if config.extra.series is defined else true) %}
-    {%- if page.extra.series %}
-
-      {%- set tag = get_taxonomy_term(kind="tags", term=page.extra.series, lang=lang) %}
-      {%- set page_num = tag.page_count | str %}
-
-        {%- if lang != config.default_language %}
-          {%- set parts_string %}{{<translate key="Series_parts" default="Series" i18n={i18n} />}}{%- endset %}
-          {%- set parts_string = parts_string | replace(from="$NUMBER_OF_PARTS", to=page_num) %}
-        {%- else %}
-          {%- set parts_string = (config.extra.Series_parts if config.extra.Series_parts else "Series") | replace(from="$NUMBER_OF_PARTS", to=page_num) %}
-        {%- endif %}
-
-      <div class="block">
-        <div class="blockdiv">
-          <a class="b s150" href="{{ tag.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ tag.name }} ({{ parts_string }})</a><br>
-      {%- for inner in tag.pages | sort(attribute="date") %}
-        {%- if inner.content == page.content %}
-          <a class="scur" href="{{ inner.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ inner.title }}</a><br>
-          {%- set_global current_section_index = loop.index0 %} {# Finds the current section, needed for pagination logic later #}
-        {%- else %}
-          <a href="{{ inner.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ inner.title }}</a><br>
-        {%- endif %}
-      {%- endfor %}
-        </div>
-      </div>
-    {%- endif %}
-    {%- endif %}
-
     <div class="article-body">{{ page.content | safe }}</div>
 
-    <hr />
-
-    {#- Share links -#}
-    {%- set encoded_url = page.permalink | urlencode %}
-    {%- set encoded_title = page.title | urlencode %}
-    <p class="post-meta-line">
-      &gt; share on
-      <a href="https://twitter.com/intent/tweet?url={{ encoded_url }}&text={{ encoded_title }}" target="_blank" rel="noopener">twitter</a>
-      /
-      <a href="https://bsky.app/intent/compose?text={{ encoded_title }}%20{{ encoded_url }}" target="_blank" rel="noopener">bluesky</a>
-      /
-      <a href="https://mastodon.social/share?text={{ encoded_title }}%20{{ encoded_url }}" target="_blank" rel="noopener">mastodon</a>
-      /
-      <a href="https://www.facebook.com/sharer/sharer.php?u={{ encoded_url }}" target="_blank" rel="noopener">facebook</a>
-      /
-      <a href="https://www.reddit.com/submit?url={{ encoded_url }}&title={{ encoded_title }}" target="_blank" rel="noopener">reddit</a>
-      /
-      <a href="https://t.me/share/url?url={{ encoded_url }}&text={{ encoded_title }}" target="_blank" rel="noopener">telegram</a>
-      /
-      <a href="mailto:yipingp@outlook.com?subject={{ encoded_title }}&body={{ encoded_url }}">email</a>
-    </p>
-
-    {#- Related Posts: Render random 3 articles via JavaScript with SSR fallback. -#}
-    {%- set_global all_pages = [] %}
-    {%- set_global seen = [] %}
-    {%- set cat_taxonomy = get_taxonomy(kind="categories", lang=lang) %}
-    {%- if cat_taxonomy %}
-    {%- for cat in cat_taxonomy.items %}
-    {%- for p in cat.pages %}
-    {%- if p.permalink != page.permalink and not p.draft and p.permalink not in seen %}
-    {%- set_global all_pages = [...all_pages, p] %}
-    {%- set_global seen = [...seen, p.permalink] %}
-    {%- endif %}
+    {#- End of article: one next step. A series part points to the next part
+        (or back to the series at the last part); a standalone post lists up
+        to three posts that share its tags or category. No share row, no random picks and
+        no date-ordered prev/next, which crossed series. -#}
+    {%- if ser and ser_idx + 1 < ser | length %}
+    {%- set nxt = ser[ser_idx + 1] %}
+    {%- set n2 = ser_idx + 2 %}
+    <p class="series-next"><span>next · {{ ser_slug }}/{{ ("0" ~ n2) if n2 < 10 else n2 }}</span><a href="{{ nxt.permalink | safe }}">{{ nxt.title }} →</a></p>
+    {%- elif ser %}
+    {#- A prefix series shares its section with other posts, so point back to
+        part 01 instead of the section page. -#}
+    <p class="series-next"><span>end of {{ ser_slug }}/</span>{% if ser_prefix %}<a href="{{ ser[0].permalink | safe }}">Back to part 01 of {{ ser_name }} →</a>{% else %}<a href="{{ ser_url | safe }}">All {{ ser | length }} parts of {{ ser_name }} →</a>{% endif %}</p>
+    {%- elif not is_about %}
+    {%- set my_tags = page.taxonomies.tags or [] %}
+    {%- set my_cats = page.taxonomies.categories or [] %}
+    {%- if my_tags or my_cats %}
+    {%- set technical = get_section(path="technical/_index.md") %}
+    {%- set murmur = get_section(path="murmur/_index.md") %}
+    {%- set_global scored = [] %}
+    {%- for p in [...technical.pages, ...murmur.pages] %}
+      {%- if p.permalink != page.permalink and not p.draft %}
+        {#- A shared tag counts 2, a shared category 1, so tags lead. -#}
+        {%- set score = 2 * ([x for x in p.taxonomies.tags or [] if x in my_tags] | length) + ([x for x in p.taxonomies.categories or [] if x in my_cats] | length) %}
+        {%- if score > 0 %}{% set_global scored = [...scored, {"s": score, "d": p.date, "p": p}] %}{% endif %}
+      {%- endif %}
     {%- endfor %}
-    {%- endfor %}
+    {#- Highest score first, newer first among equals (sort is stable). -#}
+    {%- set related = (scored | sort(attribute="d") | sort(attribute="s") | reverse)[:3] %}
+    {%- if related %}
+    <div class="related">
+      <p class="label">Related</p>
+      <ul>
+        {%- for r in related %}
+        <li><a href="{{ r.p.permalink | safe }}">{{ r.p.title }}</a></li>
+        {%- endfor %}
+      </ul>
+    </div>
     {%- endif %}
-    {%- if all_pages | length > 0 %}
-    <p class="post-meta-line">
-      &gt; related articles:<br />
-      <span id="random-articles-container">
-        <noscript>
-          {%- for p in all_pages[:3] %}
-          &nbsp;&nbsp;{{ loop.index }})
-          <a href="{{ p.permalink | safe }}">{{ p.title }}</a><br />
-          {%- endfor %}
-        </noscript>
-      </span>
-    </p>
-    <script>
-      (function() {
-        var allArticles = [
-          {%- for p in all_pages %}
-          { title: {{ p.title | json_encode | safe }}, url: {{ p.permalink | json_encode | safe }} }{% if not loop.last %},{% endif %}
-          {%- endfor %}
-        ];
-
-        if (allArticles.length > 0) {
-          // Simple Fisher-Yates shuffle
-          for (var i = allArticles.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var temp = allArticles[i];
-            allArticles[i] = allArticles[j];
-            allArticles[j] = temp;
-          }
-          var selected = allArticles.slice(0, 3);
-          var html = "";
-          for (var i = 0; i < selected.length; i++) {
-            html += "&nbsp;&nbsp;" + (i + 1) + ") <a href='" + selected[i].url + "'>" + selected[i].title + "</a><br />";
-          }
-          document.getElementById("random-articles-container").innerHTML = html;
-        }
-      })();
-    </script>
-    <hr />
+    {%- endif %}
     {%- endif %}
 
     {%- if not page.extra.hide_meta and config.extra.meta_post?.position %}
@@ -168,9 +134,7 @@
     {{<meta_post page={page}  config={config} />}}
     {%- endif %}{%- endif %}
 
-    {%- block page_footer %}
-    {{<footer page={page}  config={config} />}}
-    {%- endblock page_footer %}
+    {%- block page_footer %}{%- endblock page_footer %}
 
     {%- block comments_body %}
     {%- if config.extra.comment_system == "hyvor" and config.extra.comments?.hyvor %}
@@ -182,84 +146,23 @@
     </article>
     {%- block toc %}
     {%- if (config.extra.toc if config.extra.toc is defined else true) %}
-    {%- if show_toc or page.extra.series %}
+    {%- if (show_toc or ser) and not is_about %}
     <div class="sblock">
-      {%- if page.extra.series %}
-      {%- set num_extra_pages = (config.extra.series_items if config.extra.series_items is defined else 9) %}
+      {%- if ser %}
       <div class="blockdiv">
-        <a class="b s150" href="{{ tag.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ parts_string }}</a><br>
-        {%- if tag.page_count > num_extra_pages and num_extra_pages > 0 %}
-        {%- set sorted_array = tag.pages | sort(attribute="date") -%}
-        {%- set num_pages = tag.page_count %}
-        {#- Shows the first page -#}
-        {{<series_link inner={sorted_array[0]}  page={page}  config={config} />}}
-
-        {#- Hides the next couple of pages if the current section is more than 3 away from start #}
-        {%- if current_section_index > 3 %}
-        <details>
-          <summary>{% set _m %}{{<translate key="more" default="more" i18n={i18n} />}}{% endset %}{{ _m | title }}...</summary>
-        </details>
-        <div class="hidden_li">
-          {%- for inner in sorted_array[1:(current_section_index - 2)] %}
-          <a href="{{ inner.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ inner.title }}</a><br>
+        <p class="label"><a href="{{ ser_url | safe }}">{{ ser_slug }}/</a></p>
+        <ol class="series-parts">
+          {%- for p in ser %}
+          {%- set short = (p.title | split(pat=": "))[1:] | join(sep=": ") if p.title is starting_with(pat=ser_name) and p.title is containing(pat=": ") else p.title %}
+          <li{% if loop.index0 == ser_idx %} class="current"{% endif %}><span class="pid">{{ ("0" ~ loop.index) if loop.index < 10 else loop.index }}</span>{% if loop.index0 == ser_idx %}<span>{{ short }}</span>{% else %}<a href="{{ p.permalink | safe }}">{{ short }}</a>{% endif %}</li>
           {%- endfor %}
-        </div>
-        {%- endif %}
-
-          {#- Max(current_section_index - 2, 1) #}
-          {%- if (current_section_index - 2 ) > 1 %}
-            {%- set num = current_section_index - 2 %}
-          {%- else %}
-            {%- set num = 1 %}
-          {%- endif %}
-
-          {#- Shows two pages before current page #}
-          {%- for inner in sorted_array[num:current_section_index] %}
-        <a href="{{ inner.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ inner.title }}</a><br>
-          {%- endfor %}
-
-          {#- Shows the current page #}
-          {%- if current_section_index != 0 and current_section_index != (num_pages - 1) %}
-            {{<series_link inner={sorted_array[current_section_index]}  page={page}  config={config} />}}
-          {%- endif %}
-
-          {#- Min(num_pages - 1, current_section_index + 3) #}
-          {%- if (num_pages - 2 ) < (current_section_index + 3) %}
-            {%- set num = num_pages - 1 %}
-          {%- else %}
-            {%- set num = current_section_index + 3 %}
-          {%- endif %}
-
-          {%- for inner in sorted_array[(current_section_index + 1):num] %}
-            <a href="{{ inner.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ inner.title }}</a><br>
-          {%- endfor %}
-
-          {%- if current_section_index < num_pages - 4 %}
-            <details>
-              <summary>{% set _m %}{{<translate key="more" default="more" i18n={i18n} />}}{% endset %}{{ _m | title }}...</summary>
-            </details>
-            <div class="hidden_li">
-              {%- for inner in sorted_array[(current_section_index + 3):(num_pages - 1)] %}
-                <a href="{{ inner.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ inner.title }}</a><br>
-              {%- endfor %}
-            </div>
-          {%- endif %}
-
-        {%- set last = num_pages - 1 -%}
-        {{<series_link inner={sorted_array[last]}  page={page}  config={config} />}}
-
-        {#- If there is not more than max pages render normally -#}
-        {%- else %}
-          {%- for inner in tag.pages | sort(attribute="date") %}
-            {{<series_link inner={inner}  page={page}  config={config} />}}
-          {%- endfor %}
-        {%- endif %}
+        </ol>
       </div>
       {%- endif %}
 
       {%- if show_toc %}
       <div class="blockdiv sticky">
-        <span class="b s90">{{ toc_label }}</span>
+        <p class="label">{{ toc_label }}</p>
         <nav aria-label="{{ toc_label }}">
           {%- include "partials/toc-links.html" %}
         </nav>

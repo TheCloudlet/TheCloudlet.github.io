@@ -7,6 +7,7 @@
 <html lang="{%- if lang != config.default_language %}{{ lang }}{% else %}{{ (config.extra.language_code if config.extra.language_code else lang) }}{% endif %}">
 <head>
   {%- include "partials/head.html" -%}
+  <link rel="preload" href="{{ get_url(path="fonts/plex-sans-latin.woff2", trailing_slash=false) }}" as="font" type="font/woff2" crossorigin />
   {#- SEO: title, description, etc -#}
   {%- block seo -%}
     {%- if config.extra.title_separator -%}

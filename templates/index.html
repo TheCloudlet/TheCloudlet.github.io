@@ -1,30 +1,29 @@
-{% extends "base.html" %} {% block content %}
-<div>
-  <article>{{ section.content | safe }}</article>
+{%- extends "base.html" %}
 
-  <hr />
+{%- block seo -%}
+  {{- super() -}}
+  {{<seo config={config}  title={config.title}  title_addition=""  description={config.description}  page_url={current_url}  page={section} />}}
+{%- endblock seo -%}
 
-  {% set technical = get_section(path="technical/_index.md") %}
-  {% set murmur = get_section(path="murmur/_index.md") %}
-
-  {% set all_pages = [p for p in [...technical.pages, ...murmur.pages] if not p.draft]
-    | sort(attribute="date")
-    | reverse
-  %}
-
-  <div class="timeline">
-    {% set grouped = all_pages | group_by(attribute="year") %}
-    {% for year in [p.year for p in all_pages] | unique %}
-      <div class="timeline-year">{{ year }}</div>
-      {% for page in grouped[year] | sort(attribute="date") | reverse %}
-        <div class="timeline-item">
-          <span class="timeline-date">{{ page.date | date(format="%b %d") }}</span>
-          <span class="timeline-dot"></span>
-          <a class="timeline-title" href="{{ page.permalink | safe }}">{{ page.title }}</a>
-        </div>
-      {% endfor %}
-    {% endfor %}
-  </div>
+{%- block content %}
+<div class="home">
+  <div class="intro">{{ section.content | safe }}</div>
+  <h2 class="ident-head">series/</h2>
+  <ul class="series-strip">
+    {#- Series parts: keep this filter identical in templates/index.html,
+        templates/page.html and templates/partials/home-timeline.html. Tera's
+        include cannot return values, so each template computes it. -#}
+    {%- for s in config.extra.series_list or [] %}
+    {%- set sec = get_section(path=s.section) %}
+    {%- set parts = [p for p in sec.pages if not p.draft and (not s.prefix or p.title is starting_with(pat=s.prefix))] | sort(attribute="date") %}
+    {%- set n = parts | length %}
+    {%- if n > 0 %}
+    {#- A prefix series shares its section with other posts; link to part 01. -#}
+    <li><a class="slug" href="{{ (parts[0].permalink if s.prefix else sec.permalink) | safe }}">{{ s.slug }}/</a><span class="what">{{ s.name }} · {{ n }} parts{% if s.note %} · {{ s.note }}{% endif %}</span><span class="ends"><a href="{{ parts[0].permalink | safe }}">start at 01</a>{% if n > 1 %} · <a href="{{ parts[n - 1].permalink | safe }}">latest {{ ("0" ~ n) if n < 10 else n }}</a>{% endif %}</span></li>
+    {%- endif %}
+    {%- endfor %}
+  </ul>
+  <h2 class="ident-head">all writing/</h2>
+  {%- include "partials/home-timeline.html" %}
 </div>
-
-{% endblock content %}
+{%- endblock content %}
