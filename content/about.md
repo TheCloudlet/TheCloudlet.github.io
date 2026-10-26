@@ -10,12 +10,18 @@ draft = false
   hide_meta = true
 +++
 
-Yi-Ping Pan (Cloudlet) is a Staff Engineer at Kneron working on NPU compiler infrastructure — an MLIR-based pipeline targeting RISC-V hardware, from ONNX ingestion through tiling and memory lowering to codegen.
+Hi, I'm Yi-Ping Pan (Cloudlet), a compiler engineer in Taiwan.
 
-Previously at Synopsys, he reduced a production VHDL/RTL compilation pipeline from 26 hours to 15 minutes.
+I'm a Staff Engineer at Kneron, working on an MLIR-based compiler for edge NPU accelerators. Before that I spent four years on the VHDL compiler in Synopsys VCS, mostly on compile-time performance. The fix I'm proudest of replaced a quadratic search with a direct lookup and cut one design's compile time by 98.9%.
 
-He writes about compilers, systems, and hardware at thecloudlet.github.io. His posts on Emacs internals reached the front page of Hacker News.
+I write here about how compilers and runtimes work inside. Good places to start:
 
-He thinks in Haskell, writes in C++ and Rust, and builds in MLIR.
+-   [Emacs Internals](/technical/emacs/emacs-01/) (4 parts): GNU Emacs as a Lisp runtime in C. Parts 2 and 3 reached the Hacker News front page.
+-   [Catching NaN at the MLIR Pass Boundary](/technical/compiler/catching-nan-at-the-mlir-pass-boundary/)
+-   [Refactoring with AI](/technical/refactor-with-ai/) (2 parts): deleting dead compiler code with an untrusted LLM, verified at both ends.
 
-He can be reached at [pan.yiping.fi@gmail.com](mailto:pan.yiping.fi@gmail.com), or found on [GitHub](https://github.com/TheCloudlet) and [LinkedIn](https://linkedin.com/in/yipingpan).
+Outside work I build [timeball](https://github.com/TheCloudlet/timeball), a timing engine for hardware simulators, and [Coogle](https://github.com/TheCloudlet/Coogle), Hoogle-style type search for C++. I also rewrote the map in [rv32emu](https://github.com/sysprog21/rv32emu/pull/144), merged upstream.
+
+Email me at [pan.yiping.fi@gmail.com](mailto:pan.yiping.fi@gmail.com) about compilers, a post here, or work. I'm also on [GitHub](https://github.com/TheCloudlet) and [LinkedIn](https://linkedin.com/in/yipingpan).
+
+Views here are my own, not my employer's.
